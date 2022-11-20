@@ -1,6 +1,6 @@
 import os, shutil
 import random
-from things import generate
+from scripts.things import generate
 from PIL import Image
 import numpy as np
 from einops import rearrange, repeat

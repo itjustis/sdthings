@@ -3,15 +3,7 @@ from IPython import display as disp
 import argparse, sys
 import os
 import subprocess, time, requests
-sys.path.extend([
-    'src/taming-transformers',
-    'src/clip',
-    'stable-diffusion/',
-    'k-diffusion',
-    'pytorch3d-lite',
-    'AdaBins',
-    'MiDaS',
-])
+
 
 #os.makedirs(output_path, exist_ok=True)
 
@@ -33,8 +25,11 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
   models_path = os.path.join(basedir,'models')
 
-  os.makedirs(models_path, exist_ok=True)
+  deps_path = os.path.join(basedir,'packages')
 
+  os.makedirs(deps_path, exist_ok=True)
+  os.makedirs(models_path, exist_ok=True)
+  
   if not os.path.exists(os.path.join(models_path, model_f)):
 
       url = model_url
@@ -66,7 +61,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
               model_file.write(ckpt_request.content)
       print('saved to', os.path.join(models_path, model_f))
 
-  if not os.path.exists('k-diffusion/k_diffusion/__init__.py'):
+  if not os.path.exists(os.path.join(deps_path,'k-diffusion/k_diffusion/__init__.py')):
 
 
           setup_environment = True
@@ -79,10 +74,10 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
               all_process = [
 
-                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion'],
-                  ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git'],
-                  ['git', 'clone', 'https://github.com/isl-org/MiDaS.git'],
-                  ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git'],
+                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion', deps_path],
+                  ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', deps_path],
+                  ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', deps_path],
+                  ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git', deps_path],
 
               ]
               for process in all_process:
@@ -90,7 +85,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                   if print_subprocess:
                       print(running)
 
-              print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/'], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+              print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/', deps_path], stdout=subprocess.PIPE).stdout.decode('utf-8'))
               with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
                   f.write('')
               end_time = time.time()
@@ -119,4 +114,14 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
       with open(os.path.join(basedir,'temp.temp'), 'w') as f:
           f.write('temp')
 
-  sys.path.extend(['src/taming-transformers','src/clip','stable-diffusion/','k-diffusion','pytorch3d-lite','AdaBins','MiDaS',])
+  sys.path.extend([
+    deps_path,
+    os.path.join(deps_path,'src/taming-transformers'),
+    os.path.join(deps_path,'src/clip'),
+    os.path.join(deps_path,'stable-diffusion/'),
+    os.path.join(deps_path,'k-diffusion'),
+    os.path.join(deps_path,'pytorch3d-lite'),
+    os.path.join(deps_path,'AdaBins'),
+    os.path.join(deps_path,'MiDaS'),
+  ])
+
