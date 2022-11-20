@@ -175,13 +175,16 @@ def ret_lat(model, args,di=False):
     init_image, mask_image = load_img(args.init_image,
                                           shape=(args.W, args.H),
                                           use_alpha_as_mask=False)
-    init_image = init_image.to(device)
-    init_image = repeat(init_image, '1 ... -> b ...', b=1)
-    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+    #init_image = init_image.to(device)
+    #init_image = repeat(init_image, '1 ... -> b ...', b=1)
+    #init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+    #latent = init_latent
+    #image = ''
+    
+    results = generate(model,args, return_latent=True, return_sample=False)
+    latent, image = results[0], results[1]
     
     
-    latent = init_latent
-    image = ''
     #if di:
     #  display.display(image)
     return latent, image
