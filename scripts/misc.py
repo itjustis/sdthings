@@ -1,7 +1,17 @@
-import zipfile, os, cv2
+import zipfile, os, cv2, random
 
 import subprocess
 from subprocess import Popen, PIPE
+
+def gen_prompt(vars,au):
+    prompts=[]
+    for i in range(au):
+        random.seed()
+        p = ''
+        for v in vars:
+            p+=random.choice(v)
+        prompts.append(p)
+    return (prompts)
 
 def interpolate_keyframes(odir,basedir,d):
     film_models_folder = os.path.join(basedir,'packages/film_models')
