@@ -175,14 +175,16 @@ def ret_lat(model, args,di=False):
     init_image, mask_image = load_img(args.init_image,
                                           shape=(args.W, args.H),
                                           use_alpha_as_mask=False)
-    #init_image = init_image.to(device)
-    #init_image = repeat(init_image, '1 ... -> b ...', b=1)
-    #init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
-    #latent = init_latent
-    #image = ''
+    seed_everything(args.seed)
+    init_image = init_image.to(device)
+    init_image = repeat(init_image, '1 ... -> b ...', b=1)
+    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+    latent = init_latent
+    image = ''
+
     
-    results = generate(model,args, return_latent=True, return_sample=False)
-    latent, image = results[0], results[1]
+    #results = generate(model,args, return_latent=True, return_sample=False)
+    #latent, image = results[0], results[1]
     
     
     #if di:
@@ -360,7 +362,7 @@ def animate (idx, trunc, eta, isdisplay, vscale, model, args, keyframes_args, ke
             uc = model.get_learned_conditioning( [""])
             c = model.get_learned_conditioning(keyframes_args[0].prompt)
             all_enc=[]
-            seed_everything(videoseed)
+            
 
             for lat in keyframes_lats:
                 all_enc.append (sampler.stochastic_encode(lat, torch.tensor([t_enc]).to(device)) )
@@ -383,6 +385,7 @@ def animate (idx, trunc, eta, isdisplay, vscale, model, args, keyframes_args, ke
                 #c2 = model.get_learned_conditioning(prompts[1])
                 
                 for i in range(frames):
+                    seed_everything(videoseed)
                     
                 
                     t = blend((i/frames),easing)

@@ -3,7 +3,7 @@ import zipfile, os, cv2
 import subprocess
 from subprocess import Popen, PIPE
 
-def interpolate_keyframes(odir,basedir):
+def interpolate_keyframes(odir,basedir,d):
     film_models_folder = os.path.join(basedir,'packages/film_models')
     frames = []
     for frame in sorted(os.listdir(odir)):
@@ -13,20 +13,28 @@ def interpolate_keyframes(odir,basedir):
     print(frames)
 
     for i in range(len(frames)):
-        d = 4
+
         i2=i+1
         if i2==len(frames):
             i2=0
+            
         f1, f2 = frames[i],frames[i2]
+
         f3 = f1 +( d // 2 )
         print(f1,f2,'>',f3)
         output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f2,),"%02d" % (f3,),odir,film_models_folder))
-        f4 = f1 + ( d // 4 )
-        print(f1,f3,'>',f4)
-        output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f3,),"%02d" % (f4,),odir,film_models_folder))
-        f5 = f3 + ( d // 4 )
-        print(f3,f2,'>',f5)
-        output, err = (interpolate_frames("%02d" % (f3,),"%02d" % (f2,),"%02d" % (f5,),odir,film_models_folder))
+        
+        #while (d<
+        
+        if d==4:
+            
+            f4 = f1 + ( d // 4 )
+            print(f1,f3,'>',f4)
+            output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f3,),"%02d" % (f4,),odir,film_models_folder))
+            f5 = f3 + ( d // 4 )
+            print(f3,f2,'>',f5)
+            output, err = (interpolate_frames("%02d" % (f3,),"%02d" % (f2,),"%02d" % (f5,),odir,film_models_folder))
+            
         print('FILM pre-interpolating done')
 
 
@@ -52,11 +60,14 @@ def interpolate_frames(f1,f2,f3,odir,film_models_folder):
 def prepare_frames(inputs_folder,folder, sz, d):
     i=1
     ki=1
-    d = 4
     z = []
     sdir = os.path.join(inputs_folder,folder)
     odir = os.path.join(inputs_folder,'interpolated/'+folder)
+
     os.makedirs(odir, exist_ok=True)
+    for file in os.listdir(odir):
+        file = os.path.join(odir,file)
+        os.remove(file)
     for image_file_name in os.listdir(sdir):
         if image_file_name.endswith(".jpg") or image_file_name.endswith(".jpeg") or image_file_name.endswith(".gif") or image_file_name.endswith(".png") or image_file_name.endswith(".bmp"):
             p  = os.path.join( sdir, image_file_name)

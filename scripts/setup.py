@@ -89,7 +89,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
               end_time = time.time()
               print(f"Environment set up in {end_time-start_time:.0f} seconds")
 
-  if not os.path.exists(os.path.join(basedir,'/temp.temp')):
+  if not os.path.exists(os.path.join(basedir,'temp.temp')):
       print('packages setups...')
       p_i=0
       
