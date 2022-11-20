@@ -74,10 +74,10 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
               all_process = [
 
-                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion', deps_path],
-                  ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', deps_path],
-                  ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', deps_path],
-                  ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git', deps_path],
+                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
+                  ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', os.path.join(deps_path,'AdaBins')],
+                  ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', os.path.join(deps_path,'MiDaS')],
+                  ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git', os.path.join(deps_path,'pytorch3d-lite')],
 
               ]
               for process in all_process:
@@ -85,7 +85,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                   if print_subprocess:
                       print(running)
 
-              print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/', deps_path], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+              print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/', os.path.join(deps_path,'k-diffusion')], stdout=subprocess.PIPE).stdout.decode('utf-8'))
               with open(os.path.join(deps_path,'k-diffusion/k_diffusion/__init__.py'), 'w') as f:
                   f.write('')
               end_time = time.time()
