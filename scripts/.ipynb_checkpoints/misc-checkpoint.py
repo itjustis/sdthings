@@ -3,7 +3,7 @@ import zipfile, os, cv2
 import subprocess
 from subprocess import Popen, PIPE
 
-def interpolate_keyframes(odir,basedir)
+def interpolate_keyframes(odir,basedir):
     film_models_folder = os.path.join(basedir,'packages/film_models')
     frames = []
     for frame in sorted(os.listdir(odir)):
