@@ -29,7 +29,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
   os.makedirs(deps_path, exist_ok=True)
   os.makedirs(models_path, exist_ok=True)
-  
+
   if not os.path.exists(os.path.join(models_path, model_f)):
 
       url = model_url
@@ -86,7 +86,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                       print(running)
 
               print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/', deps_path], stdout=subprocess.PIPE).stdout.decode('utf-8'))
-              with open('k-diffusion/k_diffusion/__init__.py', 'w') as f:
+              with open(os.path.join(deps_path,'k-diffusion/k_diffusion/__init__.py'), 'w') as f:
                   f.write('')
               end_time = time.time()
               print(f"Environment set up in {end_time-start_time:.0f} seconds")
