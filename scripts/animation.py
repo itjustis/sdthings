@@ -1,16 +1,24 @@
-import os
+import os, shutil
 import random
 from things import generate
 from PIL import Image
 import numpy as np
 from einops import rearrange, repeat
-import math
 
+import math
 import torch
+import copy
+import time
 from torch import autocast
 from pytorch_lightning import seed_everything
 from ldm.models.diffusion.ddim import DDIMSampler
 from types import SimpleNamespace
+import subprocess, time, requests
+
+from IPython import display as disp
+
+def clear():
+    disp.clear_output()
 
 device = 'cuda'
 
@@ -51,6 +59,31 @@ def slerp(low, high,val):
     return res
 def slerp_theta(z1, z2,theta): return math.cos(theta) * z1 + math.sin(theta) * z2
 
+def slerp4(t, v0, v1, DOT_THRESHOLD=0.9995):
+    """ helper function to spherically interpolate two arrays v1 v2 """
+
+    if not isinstance(v0, np.ndarray):
+        inputs_are_torch = True
+        input_device = v0.device
+        v0 = v0.cpu().numpy()
+        v1 = v1.cpu().numpy()
+
+    dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
+    if np.abs(dot) > DOT_THRESHOLD:
+        v2 = (1 - t) * v0 + t * v1
+    else:
+        theta_0 = np.arccos(dot)
+        sin_theta_0 = np.sin(theta_0)
+        theta_t = theta_0 * t
+        sin_theta_t = np.sin(theta_t)
+        s0 = np.sin(theta_0 - theta_t) / sin_theta_0
+        s1 = sin_theta_t / sin_theta_0
+        v2 = s0 * v0 + s1 * v1
+
+    if inputs_are_torch:
+        v2 = torch.from_numpy(v2).to(input_device)
+
+    return v2
 
 def slerp2( v0, v1, t, DOT_THRESHOLD=0.9995):
     c = False
@@ -60,24 +93,18 @@ def slerp2( v0, v1, t, DOT_THRESHOLD=0.9995):
     if not isinstance(v1,np.ndarray):
         c = True
         v1 = v1.detach().cpu().numpy()
-    # Copy the vectors to reuse them later
     v0_copy = np.copy(v0)
     v1_copy = np.copy(v1)
-    # Normalize the vectors to get the directions and angles
     v0 = v0 / np.linalg.norm(v0)
     v1 = v1 / np.linalg.norm(v1)
-    # Dot product with the normalized vectors (can't use np.dot in W)
     dot = np.sum(v0 * v1)
-    # If absolute value of dot product is almost 1, vectors are ~colineal, so use lerp
     if np.abs(dot) > DOT_THRESHOLD:
         return torch.lerp(t, v0_copy, v1_copy)
-    # Calculate initial angle between v0 and v1
     theta_0 = np.arccos(dot)
     sin_theta_0 = np.sin(theta_0)
     # Angle at timestep t
     theta_t = theta_0 * t
     sin_theta_t = np.sin(theta_t)
-    # Finish the slerp algorithm
     s0 = np.sin(theta_0 - theta_t) / sin_theta_0
     s1 = sin_theta_t / sin_theta_0
     v2 = s0 * v0_copy + s1 * v1_copy
@@ -144,10 +171,19 @@ def show(previews):
       index+=1
   plt.show()
 def ret_lat(model, args,di=False):
-    results = generate(model, args, return_latent=True, return_sample=False)
-    latent, image = results[0], results[1]
-    if di:
-      display.display(image)
+    #results = generate(model, args, return_latent=True, return_sample=False)
+    init_image, mask_image = load_img(args.init_image,
+                                          shape=(args.W, args.H),
+                                          use_alpha_as_mask=False)
+    init_image = init_image.to(device)
+    init_image = repeat(init_image, '1 ... -> b ...', b=1)
+    init_latent = model.get_first_stage_encoding(model.encode_first_stage(init_image))  # move to latent space
+    
+    
+    latent = init_latent
+    image = ''
+    #if di:
+    #  display.display(image)
     return latent, image
 
 def lats_all(model, all_args):
@@ -159,7 +195,6 @@ def lats_all(model, all_args):
     all_lats.append(lat)
 
   return all_lats , imgs
-import copy
 
 
 def load_img(path, shape, use_alpha_as_mask=False):
@@ -182,41 +217,107 @@ def load_img(path, shape, use_alpha_as_mask=False):
       red, green, blue, alpha = Image.Image.split(image)
       mask_image = alpha.convert('L')
       image = image.convert('RGB')
+        
+    n = Image.open('/workspace/unifier.png')
+    n = n.convert('RGB')
+    n = n.resize(shape, resample=Image.LANCZOS)
+    
+    n = np.array(n).astype(np.float16)
+
+    image = (np.array(image).astype(np.float16)*.97+np.array(n).astype(np.float16)*.03) / 255.0
+    image = image[None].transpose(0, 3, 1, 2)
+    image = torch.from_numpy(image)
+    image = 2.*image - 1.
 
     return image, mask_image
 
-
-import copy
+#####
 def makeKeyframes(model, frames_folder, args):
 
     init_frames_files=sorted(os.listdir(frames_folder))
 
-
-
     all_args=[]
     for file in init_frames_files:
-
-        k_args = copy.deepcopy(args)
-
-        f = os.path.join(frames_folder,file)
-
-        print ( f )
-
-        k_args.init_image=f
-
-        if k_args.seed == -1:
-            k_args.seed = random.randint(0, 2**32)
-
-        all_args.append( k_args )
-
+        
+        if (file.endswith('.jpg') or file.endswith('.png')):
+            k_args = copy.deepcopy(args)
+            f = os.path.join(frames_folder,file)
+            print ( f )
+            k_args.init_image=f
+            if k_args.seed == -1:
+                k_args.seed = random.randint(0, 2**32)
+            all_args.append( k_args )
     all_lats, previews = lats_all( model, all_args )
-
     return all_args, all_lats, previews
 
+#####
+def makeloop(frames_folder, model, videoargs, args, outfolder, ffmpeg):
+    video_steps = videoargs.video_steps
+    keyframes_strength = videoargs.keyframes_strength
+    vseed = videoargs.vseed
+    total_frames = videoargs.total_frames
+    easing = videoargs.easing
+    interpolation = videoargs.interpolation
+    isdisplay = videoargs.isdisplay
+    vscale = videoargs.vscale
+    trunc = videoargs.truncation
+    idx = videoargs.index
+    
+    fps = videoargs.fps
+    eta = videoargs.eta
+    
+    basedir = args.basedir
 
-import os, shutil
+    
+    timestring = time.strftime('%Y%m%d%H%M%S')
+    
+    filename = str(timestring)+' n_vseed_'+str(vseed)+' vs_'+str(video_steps)+' ks_'+str(keyframes_strength)+' interp_'+str(interpolation)+' vscale_'+str(vscale)+' easing_'+str(easing)+' iter_'+'000'
+    
+    keyframes_args, keyframes_lats, keyframes_previews = makeKeyframes(model, frames_folder, args)
+    
+    animate(idx, trunc, eta, isdisplay, vscale, model, args, keyframes_args, keyframes_lats, basedir, video_steps, keyframes_strength, total_frames, easing, interpolation, vseed )
+    print ('render frames – done')
+    print ('making video')
+    
+    output_path = os.path.join(basedir, outfolder)
+    
+    os.makedirs(output_path, exist_ok=True)
+    outfile = os.path.join(output_path,filename)
+ 
+    clear()
 
-def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path , batchname='randomtest', video_steps=25,keyframes_strength=0.4,total_frames=60,easing='linear', interpolation='slerp3', videoseed = -1 ):
+    mp4_path = str(outfile)+'.mp4'
+    frames_temp_dir = os.path.join ( basedir , 'temp_frames')
+    image_path = os.path.join(frames_temp_dir, "%04d.png")
+    cmd = [
+        ffmpeg,
+        '-y',
+        '-vcodec', 'png',
+        '-r', str(fps),
+        '-start_number', str(0),
+        '-i', image_path,
+        '-c:v', 'libx264',
+        '-vf',
+        f'fps={fps}',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '7',
+        '-preset', 'slow',
+        '-pattern_type', 'sequence',
+        mp4_path
+    ]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print(stderr)
+        raise RuntimeError(stderr)
+        
+    return(mp4_path)
+
+    
+#####
+def animate (idx, trunc, eta, isdisplay, vscale, model, args, keyframes_args, keyframes_lats, basedir, video_steps=25,keyframes_strength=0.4,total_frames=60,easing='linear', interpolation='slerp3', videoseed = -1 ):
+
+  torch.cuda.empty_cache()
 
   frames_temp_dir = os.path.join ( basedir , 'temp_frames')
 
@@ -236,7 +337,7 @@ def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path 
   precision_scope = autocast if args.precision == "autocast" else nullcontext
   results = []
   sampler = DDIMSampler(model)
-  sampler.make_schedule(ddim_num_steps=video_steps, ddim_eta=0, verbose=False)
+  sampler.make_schedule(ddim_num_steps=video_steps, ddim_eta=eta, verbose=False)
 
 
   frames=total_frames
@@ -252,6 +353,9 @@ def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path 
   with torch.no_grad():
     with precision_scope("cuda"):
         with model.ema_scope():
+
+
+            
           t_enc = int((1.0-keyframes_strength) * video_steps)
 
           uc = model.get_learned_conditioning( [""])
@@ -260,15 +364,18 @@ def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path 
 
           for lat in keyframes_lats:
               all_enc.append (sampler.stochastic_encode(lat, torch.tensor([t_enc]).to(device)) )
+            
+        
 
           for idx1 in range (length):
-
-              if idx2>length-2:
+              if idx1 == length - 1:
                 idx2=0
               else:
                 idx2=idx1+1
 
               prompts=[keyframes_args[idx1].prompt,keyframes_args[idx2].prompt]
+            
+              print(idx1,idx2)
               seed_everything(videoseed)
 
 
@@ -276,11 +383,21 @@ def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path 
               z_enc_2 = all_enc[idx2]
 
               c1 = model.get_learned_conditioning(prompts[0])
-              c2 = model.get_learned_conditioning(prompts[1])
+              #c2 = model.get_learned_conditioning(prompts[1])
+            
+              
 
               for i in range(frames):
-
+                
                   t = blend((i/frames),easing)
+                  dynkey = False                  
+                  if dynkey:
+                    #keyframes_strength = (math.sin(i/frames*math.pi/2+(math.pi*shift))/2+0.5)*amp+basestr
+                    t_enc = int((1.0-keyframes_strength) * video_steps)
+                  else:
+                    t_enc = int((1.0-keyframes_strength) * video_steps)
+                    
+                  #print(t_enc, t, '_')
 
                   if interpolation=='slerp':
                     interpolate = slerp
@@ -288,24 +405,51 @@ def animate ( model, args, keyframes_args, keyframes_lats, basedir, output_path 
                     interpolate = slerp2
                   elif interpolation=='slerp3':
                     interpolate = slerp3
+                  elif interpolation=='slerp4':
+                    interpolate = slerp4
                   else:
                     interpolate = slerp_theta
+                    
+                
 
 
-                  c = torch.lerp(  c1, c2, t )
-                  q = interpolate(  z_enc_1, z_enc_2, t )
+                  #c = torch.lerp(  c1, c2, t )
+                  c = c1
+                  
+                  if interpolation == 'mix':
+                    q = (slerp(z_enc_1, z_enc_2, t) + slerp2(z_enc_1, z_enc_2, t) + slerp3(z_enc_1, z_enc_2, t) )/3
+                  elif interpolation == 'exp':
+                    tt = i / frames
+                    #xc = sinh(a * (t * 2.0 - 1.0)) / sinh(a) / 2.0 + 0.5
+                    xn = 2.0 * tt**2 if tt < 0.5 else 1.0 - 2.0 * (1.0 - tt) ** 2
+                    q = z_enc_1 * math.sqrt(1.0 - xn) + z_enc_2 * math.sqrt(xn)
+                  else:
+                    q = interpolate(  z_enc_1, z_enc_2, t )
+                    
 
-                  samples = sampler.decode(q, c, t_enc, unconditional_guidance_scale=args.scale,unconditional_conditioning=uc,)
+                
+                  #q = slerp2( q_m, q, trunc )
+                    
 
+
+                  #truncn = 2.0 * trunc**2 if trunc < 0.5 else 1.0 - 2.0 * (1.0 - trunc) ** 2
+                  #q = q_m * math.sqrt(1.0 - truncn) + q * math.sqrt(truncn)
+              
+                  samples = sampler.decode(q, c, t_enc, unconditional_guidance_scale=vscale,unconditional_conditioning=uc,)
+                  
                   x_samples = model.decode_first_stage(samples)
                   x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                    
+                  clear()
 
                   for x_sample in x_samples:
                       x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
                       image = Image.fromarray(x_sample.astype(np.uint8))
                       results.append(image)
-                      #if display_frames:
-                      #  display.display(image)
+                      if isdisplay:
+                        disp.display(image)
                       filename = f"{index:04}.png"
                       image.save(os.path.join(frames_temp_dir, filename))
                   index+=1
+                
+                

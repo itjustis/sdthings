@@ -13,12 +13,14 @@ sys.path.extend([
     'MiDaS',
 ])
 
+#os.makedirs(output_path, exist_ok=True)
 
 model_sha256 = 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'
 model_url = 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt'
 model_url_runway_1_5 = 'https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt'
 
-def setup(hf='none',model='sd-1.4', basedir = '/workspace/', output_path='/content/'):
+def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
+    
   global model_url, model_url_runway_1_5, model_sha256
   if model=='sd-v1-4.ckpt':
       model_f='sd-v1-4.ckpt'
@@ -66,7 +68,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/', output_path='/conte
 
   if not os.path.exists('k-diffusion/k_diffusion/__init__.py'):
 
-          os.makedirs(output_path, exist_ok=True)
+
           setup_environment = True
           print_subprocess = False
           if setup_environment:
@@ -108,11 +110,13 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/', output_path='/conte
               ]
 
       for process in all_process:
-          running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
+          running = subprocess.run(process,stdout=subprocess.PIPE, ).stdout.decode('utf-8')
           print(running)
           disp.clear_output(wait=True)
           p_i += 1
           print('please wait...',p_i,'/',7)
 
-      with open('/content/temp.temp', 'w') as f:
+      with open(os.path.join(basedir,'temp.temp'), 'w') as f:
           f.write('temp')
+
+  sys.path.extend(['src/taming-transformers','src/clip','stable-diffusion/','k-diffusion','pytorch3d-lite','AdaBins','MiDaS',])
