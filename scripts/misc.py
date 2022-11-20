@@ -10,7 +10,7 @@ def unzip_inputs(folder):
           with zipfile.ZipFile(pp, 'r') as zip_ref:
               zip_ref.extractall(folder)
           f = os.path.join(of,z)
-          %rm {f}
+          os.remove(f)
           clean_up_inputs(folder)
       
 def clean_up_inputs(inputs_folder):
@@ -28,3 +28,19 @@ def clean_up_inputs(inputs_folder):
 
     for f in files:
       os.rename(os.path.join(inputs_folder, f), os.path.join(newdir, f))
+
+def resize(img,sz):
+    height = np.size(img, 0)
+    width = np.size(img, 1)
+    
+    if width > height:
+        ratio = width / height
+        nw = int(sz* ratio)
+        nh = sz
+    else:
+        ratio =  height / width
+        nh = int(sz* ratio)
+        nw = sz
+        
+    return(cv2.resize(img, (nw, nh)))
+    
