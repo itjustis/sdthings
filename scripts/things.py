@@ -241,7 +241,9 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
     if os.path.exists(ckpt_config_path):
         print(f"{ckpt_config_path} exists")
     else:
-        ckpt_config_path = "./stable-diffusion/configs/stable-diffusion/v1-inference.yaml"
+        ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
+    #print(ckpt_config_path)
+    #print('0', os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml"))
     print(f"Using config: {ckpt_config_path}")
 
     # checkpoint path or download

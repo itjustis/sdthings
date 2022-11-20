@@ -98,8 +98,8 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                   ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
                   ['pip', 'install', 'pandas', 'scikit-image', 'opencv-python', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
                   ['pip', 'install', 'flask_cors', 'flask_ngrok', 'pyngrok==4.1.1', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
-                  ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers'],
-                  ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip'],
+                  ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers','--src',os.path.join(deps_path,'src')],
+                  ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip','--src',os.path.join(deps_path,'src')],
                   ['apt-get', 'update'],
                   ['apt-get', 'install', '-y', 'python3-opencv']
               ]
@@ -114,6 +114,9 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
       with open(os.path.join(basedir,'temp.temp'), 'w') as f:
           f.write('temp')
 
+
+def sys_extend(basedir):
+  deps_path = os.path.join(basedir,'packages')
   sys.path.extend([
     deps_path,
     os.path.join(deps_path,'src/taming-transformers'),
