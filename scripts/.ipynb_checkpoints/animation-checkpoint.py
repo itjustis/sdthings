@@ -228,8 +228,9 @@ def load_img(path, shape, use_alpha_as_mask=False):
     n = n.resize(shape, resample=Image.LANCZOS)
     
     n = np.array(n).astype(np.float16)
+    
 
-    image = (np.array(image).astype(np.float16)*.97+np.array(n).astype(np.float16)*.03) / 255.0
+    image = (np.array(image).astype(np.float16)*.9+np.array(n).astype(np.float16)*.1) / 255.0
     image = image[None].transpose(0, 3, 1, 2)
     image = torch.from_numpy(image)
     image = 2.*image - 1.

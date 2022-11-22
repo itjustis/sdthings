@@ -101,7 +101,9 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                   ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers','--src',os.path.join(deps_path,'src')],
                   ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip','--src',os.path.join(deps_path,'src')],
                   ['apt-get', 'update'],
-                  ['apt-get', 'install', '-y', 'python3-opencv']
+                  ['apt-get', 'install', '-y', 'python3-opencv'],
+                  ['apt-get', 'install', '-y', 'ffmpeg']
+          
               ]
 
       for process in all_process:
@@ -109,7 +111,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
           print(running)
           disp.clear_output(wait=True)
           p_i += 1
-          print('please wait...',p_i,'/',8)
+          print('please wait...',p_i,'/',9)
 
   
       with open(os.path.join(basedir,'temp.temp'), 'w') as f:
