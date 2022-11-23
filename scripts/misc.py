@@ -50,7 +50,6 @@ def interpolate_keyframes(odir,basedir,d):
 
 def interpolate_frames(f1,f2,f3,odir,film_models_folder):
   model_path=os.path.join(film_models_folder,'film_net/Style/saved_model')
-  print(model_path)
   command = ['python3', 
        '-m', 
        'packages.frame_interpolation.eval.interpolator_test',
