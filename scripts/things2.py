@@ -25,11 +25,10 @@ from types import SimpleNamespace
 from torch import autocast
 
 from helpers import DepthModel, sampler_fn
-from k_diffusion.external import CompVisDenoiser
+from k_diffusion.external import CompVisVDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-
 
 def sanitize(prompt):
     whitelist = set('abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -217,26 +216,7 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
 
-    model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
-     #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
-    custom_config_path = "" #@param {type:"string"}
-    custom_checkpoint_path = "" #@param {type:"string"}
-
-    load_on_run_all = True #@param {type: 'boolean'}
-    half_precision = True # check
-    check_sha256 = False #@param {type:"boolean"}
-
-    model_map = {
-        "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
-        "sd-v1-4.ckpt": {'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'},
-        "sd-v1-3-full-ema.ckpt": {'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca'},
-        "sd-v1-3.ckpt": {'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f'},
-        "sd-v1-2-full-ema.ckpt": {'sha256': 'bc5086a904d7b9d13d2a7bccf38f089824755be7261c7399d92e555e1e9ac69a'},
-        "sd-v1-2.ckpt": {'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d'},
-        "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
-        "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
-    }
-
+    model_config = "v1-inference.yaml"
     # config path
     ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
     if os.path.exists(ckpt_config_path):
@@ -245,64 +225,37 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
     if (model_checkpoint == '768-v-ema.ckpt'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),'stablediffusion/configs/stable-diffusion/v2-inference-v.yaml')
-    #print(ckpt_config_path)
-    #print('0', os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml"))
+    
     print(f"Using config: {ckpt_config_path}")
 
     # checkpoint path or download
     ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
-    ckpt_valid = True
-    if os.path.exists(ckpt_path):
-        print(f"{ckpt_path} exists")
-    else:
-        print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
-        ckpt_valid = False
+    print(f"Using ckpt: {ckpt_path}")
+    
+    config = OmegaConf.load(f"{ckpt_config_path}")
+    model = load_model_from_config(config, f"{ckpt_path}")
 
-    if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
-        import hashlib
-        print("\n...checking sha256")
-        with open(ckpt_path, "rb") as f:
-            bytes = f.read()
-            hash = hashlib.sha256(bytes).hexdigest()
-            del bytes
-        if model_map[model_checkpoint]["sha256"] == hash:
-            print("hash is correct\n")
-        else:
-            print("hash in not correct\n")
-            ckpt_valid = False
-
-    if ckpt_valid:
-        print(f"Using ckpt: {ckpt_path}")
-
-    def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
-        map_location = "cuda" #@param ["cpu", "cuda"]
-        print(f"Loading model from {ckpt}")
-        pl_sd = torch.load(ckpt, map_location=map_location)
-        if "global_step" in pl_sd:
-            print(f"Global Step: {pl_sd['global_step']}")
-        sd = pl_sd["state_dict"]
-        model = instantiate_from_config(config.model)
-        m, u = model.load_state_dict(sd, strict=False)
-        if len(m) > 0 and verbose:
-            print("missing keys:")
-            print(m)
-        if len(u) > 0 and verbose:
-            print("unexpected keys:")
-            print(u)
-
-        if half_precision:
-            model = model.half().to(device)
-        else:
-            model = model.to(device)
-        model.eval()
-        return model
-
-
-    local_config = OmegaConf.load(f"{ckpt_config_path}")
-    model = load_model_from_config(local_config, f"{ckpt_path}", half_precision=half_precision)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+    return model
 
+def load_model_from_config(config, ckpt, verbose=False):
+    print(f"Loading model from {ckpt}")
+    pl_sd = torch.load(ckpt, map_location="cpu")
+    if "global_step" in pl_sd:
+        print(f"Global Step: {pl_sd['global_step']}")
+    sd = pl_sd["state_dict"]
+    model = instantiate_from_config(config.model)
+    m, u = model.load_state_dict(sd, strict=False)
+    if len(m) > 0 and verbose:
+        print("missing keys:")
+        print(m)
+    if len(u) > 0 and verbose:
+        print("unexpected keys:")
+        print(u)
+
+    model.cuda()
+    model.eval()
     return model
 
 
@@ -324,7 +277,7 @@ def generate(model, args, return_latent=False, return_sample=False, return_c=Fal
     os.makedirs(args.outdir, exist_ok=True)
 
     sampler = PLMSSampler(model) if args.sampler == 'plms' else DDIMSampler(model)
-    model_wrap = CompVisDenoiser(model)
+    model_wrap = CompVisVDenoiser(model)
     batch_size = args.n_samples
     prompt = args.prompt
     assert prompt is not None
@@ -391,7 +344,7 @@ def generate(model, args, return_latent=False, return_sample=False, return_c=Fal
     k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
 
     if args.sampler in ['plms','ddim']:
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, ddim_discretize='fill', verbose=False)
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
         #sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta,  verbose=False)
 
     callback = make_callback(sampler_name=args.sampler,
