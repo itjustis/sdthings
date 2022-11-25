@@ -24,89 +24,11 @@ from tqdm import tqdm, trange
 from types import SimpleNamespace
 from torch import autocast
 
-from helpers import DepthModel, sampler_fn, CFGDenoiserWithGrad
-from k_diffusion.external import CompVisVDenoiser
+from helpers import DepthModel, sampler_fn
+from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-
-import clip
-from torchvision.transforms import Normalize as Normalize
-from torch.nn import functional as F
-
-
-## CLIP -----------------------------------------
-
-class MakeCutouts(nn.Module):
-    def __init__(self, cut_size, cutn, cut_pow=1.):
-        super().__init__()
-        self.cut_size = cut_size
-        self.cutn = cutn
-        self.cut_pow = cut_pow
-
-    def forward(self, input):
-        sideY, sideX = input.shape[2:4]
-        max_size = min(sideX, sideY)
-        min_size = min(sideX, sideY, self.cut_size)
-        cutouts = []
-        for _ in range(self.cutn):
-            size = int(torch.rand([])**self.cut_pow * (max_size - min_size) + min_size)
-            offsetx = torch.randint(0, sideX - size + 1, ())
-            offsety = torch.randint(0, sideY - size + 1, ())
-            cutout = input[:, :, offsety:offsety + size, offsetx:offsetx + size]
-            cutouts.append(F.adaptive_avg_pool2d(cutout, self.cut_size))
-        return torch.cat(cutouts)
-
-
-def spherical_dist_loss(x, y):
-    x = F.normalize(x, dim=-1)
-    y = F.normalize(y, dim=-1)
-    return (x - y).norm(dim=-1).div(2).arcsin().pow(2).mul(2)
-
-def make_clip_loss_fn(clip_model, clip_prompts, cutn=1, cut_pow=1):
-    clip_size = clip_model.visual.input_resolution # for openslip: clip_model.visual.image_size
-
-    def parse_prompt(prompt):
-        if prompt.startswith('http://') or prompt.startswith('https://'):
-            vals = prompt.rsplit(':', 2)
-            vals = [vals[0] + ':' + vals[1], *vals[2:]]
-        else:
-            vals = prompt.rsplit(':', 1)
-        vals = vals + ['', '1'][len(vals):]
-        return vals[0], float(vals[1])
-
-    def parse_clip_prompts(clip_prompts):
-        target_embeds, weights = [], []
-        for prompt in clip_prompts:
-            txt, weight = parse_prompt(prompt)
-            target_embeds.append(clip_model.encode_text(clip.tokenize(txt).to(device)).float())
-            weights.append(weight)
-        target_embeds = torch.cat(target_embeds)
-        weights = torch.tensor(weights, device=device)
-        if weights.sum().abs() < 1e-3:
-            raise RuntimeError('Clip prompt weights must not sum to 0.')
-        weights /= weights.sum().abs()
-        return target_embeds, weights
-
-    normalize = Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
-                          std=[0.26862954, 0.26130258, 0.27577711])
-
-    make_cutouts = MakeCutouts(clip_size, cutn, cut_pow)
-    target_embeds, weights = parse_clip_prompts(clip_prompts)
-
-    def clip_loss_fn(x, sigma, **kwargs):
-        nonlocal target_embeds, weights, make_cutouts, normalize
-        clip_in = normalize(make_cutouts(x.add(1).div(2)))
-        image_embeds = clip_model.encode_image(clip_in).float()
-        dists = spherical_dist_loss(image_embeds[:, None], target_embeds[None])
-        dists = dists.view([cutn, 1, -1])
-        losses = dists.mul(weights).sum(2).mean(0)
-        return losses.sum()
-    
-    return clip_loss_fn
-
-## end CLIP -----------------------------------------
-
 
 
 def sanitize(prompt):
@@ -295,7 +217,26 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
 
-    model_config = "v1-inference.yaml"
+    model_config = "v1-inference.yaml" #@param ["custom","v1-inference.yaml"]
+     #@param ["custom","sd-v1-4-full-ema.ckpt","sd-v1-4.ckpt","sd-v1-3-full-ema.ckpt","sd-v1-3.ckpt","sd-v1-2-full-ema.ckpt","sd-v1-2.ckpt","sd-v1-1-full-ema.ckpt","sd-v1-1.ckpt"]
+    custom_config_path = "" #@param {type:"string"}
+    custom_checkpoint_path = "" #@param {type:"string"}
+
+    load_on_run_all = True #@param {type: 'boolean'}
+    half_precision = True # check
+    check_sha256 = False #@param {type:"boolean"}
+
+    model_map = {
+        "sd-v1-4-full-ema.ckpt": {'sha256': '14749efc0ae8ef0329391ad4436feb781b402f4fece4883c7ad8d10556d8a36a'},
+        "sd-v1-4.ckpt": {'sha256': 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'},
+        "sd-v1-3-full-ema.ckpt": {'sha256': '54632c6e8a36eecae65e36cb0595fab314e1a1545a65209f24fde221a8d4b2ca'},
+        "sd-v1-3.ckpt": {'sha256': '2cff93af4dcc07c3e03110205988ff98481e86539c51a8098d4f2236e41f7f2f'},
+        "sd-v1-2-full-ema.ckpt": {'sha256': 'bc5086a904d7b9d13d2a7bccf38f089824755be7261c7399d92e555e1e9ac69a'},
+        "sd-v1-2.ckpt": {'sha256': '3b87d30facd5bafca1cbed71cfb86648aad75d1c264663c0cc78c7aea8daec0d'},
+        "sd-v1-1-full-ema.ckpt": {'sha256': 'efdeb5dc418a025d9a8cc0a8617e106c69044bc2925abecc8a254b2910d69829'},
+        "sd-v1-1.ckpt": {'sha256': '86cd1d3ccb044d7ba8db743d717c9bac603c4043508ad2571383f954390f3cea'}
+    }
+
     # config path
     ckpt_config_path = custom_config_path if model_config == "custom" else os.path.join(models_path, model_config)
     if os.path.exists(ckpt_config_path):
@@ -304,192 +245,71 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
     if (model_checkpoint == '768-v-ema.ckpt'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),'stablediffusion/configs/stable-diffusion/v2-inference-v.yaml')
-    
+    #print(ckpt_config_path)
+    #print('0', os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml"))
     print(f"Using config: {ckpt_config_path}")
 
     # checkpoint path or download
     ckpt_path = custom_checkpoint_path if model_checkpoint == "custom" else os.path.join(models_path, model_checkpoint)
-    print(f"Using ckpt: {ckpt_path}")
-    
-    config = OmegaConf.load(f"{ckpt_config_path}")
-    model = load_model_from_config(config, f"{ckpt_path}")
+    ckpt_valid = True
+    if os.path.exists(ckpt_path):
+        print(f"{ckpt_path} exists")
+    else:
+        print(f"Please download model checkpoint and place in {os.path.join(models_path, model_checkpoint)}")
+        ckpt_valid = False
 
+    if check_sha256 and model_checkpoint != "custom" and ckpt_valid:
+        import hashlib
+        print("\n...checking sha256")
+        with open(ckpt_path, "rb") as f:
+            bytes = f.read()
+            hash = hashlib.sha256(bytes).hexdigest()
+            del bytes
+        if model_map[model_checkpoint]["sha256"] == hash:
+            print("hash is correct\n")
+        else:
+            print("hash in not correct\n")
+            ckpt_valid = False
+
+    if ckpt_valid:
+        print(f"Using ckpt: {ckpt_path}")
+
+    def load_model_from_config(config, ckpt, verbose=False, device='cuda', half_precision=True):
+        map_location = "cuda" #@param ["cpu", "cuda"]
+        print(f"Loading model from {ckpt}")
+        pl_sd = torch.load(ckpt, map_location=map_location)
+        if "global_step" in pl_sd:
+            print(f"Global Step: {pl_sd['global_step']}")
+        sd = pl_sd["state_dict"]
+        model = instantiate_from_config(config.model)
+        m, u = model.load_state_dict(sd, strict=False)
+        if len(m) > 0 and verbose:
+            print("missing keys:")
+            print(m)
+        if len(u) > 0 and verbose:
+            print("unexpected keys:")
+            print(u)
+
+        if half_precision:
+            model = model.half().to(device)
+        else:
+            model = model.to(device)
+        model.eval()
+        return model
+
+
+    local_config = OmegaConf.load(f"{ckpt_config_path}")
+    model = load_model_from_config(local_config, f"{ckpt_path}", half_precision=half_precision)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+
     return model
 
-def load_model_from_config(config, ckpt, verbose=False):
-    print(f"Loading model from {ckpt}")
-    pl_sd = torch.load(ckpt, map_location="cpu")
-    if "global_step" in pl_sd:
-        print(f"Global Step: {pl_sd['global_step']}")
-    sd = pl_sd["state_dict"]
-    model = instantiate_from_config(config.model)
-    m, u = model.load_state_dict(sd, strict=False)
-    if len(m) > 0 and verbose:
-        print("missing keys:")
-        print(m)
-    if len(u) > 0 and verbose:
-        print("unexpected keys:")
-        print(u)
 
-    model.cuda()
-    model.eval()
-    return model
-
-###
-# Thresholding functions for grad
-###
-def threshold_by(threshold, threshold_type):
-
-  def dynamic_thresholding(vals, sigma):
-      # Dynamic thresholding from Imagen paper (May 2022)
-      s = np.percentile(np.abs(vals.cpu()), threshold, axis=tuple(range(1,vals.ndim)))
-      s = np.max(np.append(s,1.0))
-      vals = torch.clamp(vals, -1*s, s)
-      vals = torch.FloatTensor.div(vals, s)
-      return vals
-
-  def static_thresholding(vals, sigma):
-      vals = torch.clamp(vals, -1*threshold, threshold)
-      return vals
-
-  def mean_thresholding(vals, sigma): # Thresholding that appears in Jax and Disco
-      magnitude = vals.square().mean(axis=(1,2,3),keepdims=True).sqrt()
-      vals = vals * torch.where(magnitude > threshold, threshold / magnitude, 1.0)
-      return vals
-
-  if threshold_type == 'dynamic':
-      return dynamic_thresholding
-  elif threshold_type == 'static':
-      return static_thresholding
-  elif threshold_type == 'mean':
-      return mean_thresholding
-  else:
-      raise Exception(f"Thresholding type {threshold_type} not supported")
-
-
-
-#
-# Callback functions
-#
-class SamplerCallback(object):
-    # Creates the callback function to be passed into the samplers for each step
-    def __init__(self, args, mask=None, init_latent=None, sigmas=None, sampler=None,
-                  verbose=False):
-        self.sampler_name = args.sampler
-        self.dynamic_threshold = args.dynamic_threshold
-        self.static_threshold = args.static_threshold
-        self.mask = mask
-        self.init_latent = init_latent 
-        self.sigmas = sigmas
-        self.sampler = sampler
-        self.verbose = verbose
-
-        self.batch_size = args.n_samples
-        self.save_sample_per_step = args.save_sample_per_step
-        self.show_sample_per_step = args.show_sample_per_step
-        self.paths_to_image_steps = [os.path.join( args.outdir, f"{args.timestring}_{index:02}_{args.seed}") for index in range(args.n_samples) ]
-
-        if self.save_sample_per_step:
-            for path in self.paths_to_image_steps:
-                os.makedirs(path, exist_ok=True)
-
-        self.step_index = 0
-
-        self.noise = None
-        if init_latent is not None:
-            self.noise = torch.randn_like(init_latent, device=device)
-
-        self.mask_schedule = None
-        if sigmas is not None and len(sigmas) > 0:
-            self.mask_schedule, _ = torch.sort(sigmas/torch.max(sigmas))
-        elif len(sigmas) == 0:
-            self.mask = None # no mask needed if no steps (usually happens because strength==1.0)
-
-        if self.sampler_name in ["plms","ddim"]: 
-            if mask is not None:
-                assert sampler is not None, "Callback function for stable-diffusion samplers requires sampler variable"
-
-        if self.sampler_name in ["plms","ddim"]: 
-            # Callback function formated for compvis latent diffusion samplers
-            self.callback = self.img_callback_
-        else: 
-            # Default callback function uses k-diffusion sampler variables
-            self.callback = self.k_callback_
-
-        self.verbose_print = print if verbose else lambda *args, **kwargs: None
-
-    def view_sample_step(self, latents, path_name_modifier=''):
-        if self.save_sample_per_step:
-            samples = model.decode_first_stage(latents)
-            fname = f'{path_name_modifier}_{self.step_index:05}.png'
-            for i, sample in enumerate(samples):
-                sample = sample.double().cpu().add(1).div(2).clamp(0, 1)
-                sample = torch.tensor(np.array(sample))
-                grid = make_grid(sample, 4).cpu()
-                TF.to_pil_image(grid).save(os.path.join(self.paths_to_image_steps[i], fname))
-        if self.show_sample_per_step:
-            samples = model.linear_decode(latents)
-            print(path_name_modifier)
-            self.display_images(samples)
-        return
-
-    def display_images(self, images):
-        images = images.double().cpu().add(1).div(2).clamp(0, 1)
-        images = torch.tensor(np.array(images))
-        grid = make_grid(images, 4).cpu()
-        display.display(TF.to_pil_image(grid))
-        return
-
-    # The callback function is applied to the image at each step
-    def dynamic_thresholding_(self, img, threshold):
-        # Dynamic thresholding from Imagen paper (May 2022)
-        s = np.percentile(np.abs(img.cpu()), threshold, axis=tuple(range(1,img.ndim)))
-        s = np.max(np.append(s,1.0))
-        torch.clamp_(img, -1*s, s)
-        torch.FloatTensor.div_(img, s)
-
-    # Callback for samplers in the k-diffusion repo, called thus:
-    #   callback({'x': x, 'i': i, 'sigma': sigmas[i], 'sigma_hat': sigmas[i], 'denoised': denoised})
-    def k_callback_(self, args_dict):
-        self.step_index = args_dict['i']
-        if self.dynamic_threshold is not None:
-            self.dynamic_thresholding_(args_dict['x'], self.dynamic_threshold)
-        if self.static_threshold is not None:
-            torch.clamp_(args_dict['x'], -1*self.static_threshold, self.static_threshold)
-        if self.mask is not None:
-            init_noise = self.init_latent + self.noise * args_dict['sigma']
-            is_masked = torch.logical_and(self.mask >= self.mask_schedule[args_dict['i']], self.mask != 0 )
-            new_img = init_noise * torch.where(is_masked,1,0) + args_dict['x'] * torch.where(is_masked,0,1)
-            args_dict['x'].copy_(new_img)
-
-        self.view_sample_step(args_dict['denoised'], "x0_pred")
-        self.view_sample_step(args_dict['x'], "x")
-
-    # Callback for Compvis samplers
-    # Function that is called on the image (img) and step (i) at each step
-    def img_callback_(self, img, pred_x0, i):
-        self.step_index = i
-        # Thresholding functions
-        if self.dynamic_threshold is not None:
-            self.dynamic_thresholding_(img, self.dynamic_threshold)
-        if self.static_threshold is not None:
-            torch.clamp_(img, -1*self.static_threshold, self.static_threshold)
-        if self.mask is not None:
-            i_inv = len(self.sigmas) - i - 1
-            init_noise = self.sampler.stochastic_encode(self.init_latent, torch.tensor([i_inv]*self.batch_size).to(device), noise=self.noise)
-            is_masked = torch.logical_and(self.mask >= self.mask_schedule[i], self.mask != 0 )
-            new_img = init_noise * torch.where(is_masked,1,0) + img * torch.where(is_masked,0,1)
-            img.copy_(new_img)
-
-        self.view_sample_step(pred_x0, "x0_pred")
-        self.view_sample_step(img, "x")
 
 
 import cv2
 from PIL import ImageOps
-
 
 
 def imgtobytes(image):
@@ -498,13 +318,13 @@ def imgtobytes(image):
   return content2
 
 
-def generate(model, clip_model, args, return_latent=False, return_sample=False, return_c=False):
+def generate(model, args, return_latent=False, return_sample=False, return_c=False):
     device = 'cuda'
     seed_everything(args.seed)
     os.makedirs(args.outdir, exist_ok=True)
 
     sampler = PLMSSampler(model) if args.sampler == 'plms' else DDIMSampler(model)
-    model_wrap = CompVisVDenoiser(model)
+    model_wrap = CompVisDenoiser(model)
     batch_size = args.n_samples
     prompt = args.prompt
     assert prompt is not None
@@ -571,38 +391,16 @@ def generate(model, clip_model, args, return_latent=False, return_sample=False, 
     k_sigmas = k_sigmas[len(k_sigmas)-t_enc-1:]
 
     if args.sampler in ['plms','ddim']:
-        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, verbose=False)
+        sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta, ddim_discretize='fill', verbose=False)
         #sampler.make_schedule(ddim_num_steps=args.steps, ddim_eta=args.ddim_eta,  verbose=False)
-        
-    if args.clip_loss_scale != 0:
-        clip_loss_fn = make_clip_loss_fn(clip_model=clip_model, 
-                                        clip_prompts=args.clip_prompts, 
-                                        cutn=args.cutn, 
-                                        cut_pow=args.cut_pow)
-    else:
-        clip_loss_fn = None
 
-    loss_fns_scales = [
-        [clip_loss_fn,              args.clip_loss_scale]
-    ]
-
-    callback = SamplerCallback(args=args,
-                            mask=mask, 
+    callback = make_callback(sampler_name=args.sampler,
+                            dynamic_threshold=args.dynamic_threshold,
+                            static_threshold=args.static_threshold,
+                            mask=mask,
                             init_latent=init_latent,
                             sigmas=k_sigmas,
-                            sampler=sampler,
-                            verbose=False).callback 
-
-    clamp_fn = threshold_by(threshold=args.clamp_grad_threshold, threshold_type=args.grad_threshold_type)
-
-    cfg_model = CFGDenoiserWithGrad(model_wrap, 
-                                    loss_fns_scales, 
-                                    clamp_fn, 
-                                    args.gradient_wrt, 
-                                    args.gradient_add_to, 
-                                    args.cond_uncond_sync,
-                                    decode_method=args.decode_method,
-                                    verbose=False)
+                            sampler=sampler)
 
     results = []
     with torch.no_grad():
@@ -621,15 +419,14 @@ def generate(model, clip_model, args, return_latent=False, return_sample=False, 
 
                     if args.sampler in ["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral"]:
                         samples = sampler_fn(
-                            c=c, 
-                            uc=uc, 
-                            args=args, 
-                            model_wrap=cfg_model, 
-                            init_latent=init_latent, 
-                            t_enc=t_enc, 
-                            device=device, 
-                            cb=callback,
-                            verbose=False)
+                            c=c,
+                            uc=uc,
+                            args=args,
+                            model_wrap=model_wrap,
+                            init_latent=init_latent,
+                            t_enc=t_enc,
+                            device=device,
+                            cb=callback)
                     else:
                         # args.sampler == 'plms' or args.sampler == 'ddim':
                         if init_latent is not None and args.strength > 0:
