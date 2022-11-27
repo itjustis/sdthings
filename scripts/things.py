@@ -29,7 +29,7 @@ from k_diffusion.external import CompVisDenoiser
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 from ldm.models.diffusion.plms import PLMSSampler
-from ldm.models.diffusion.dpm_solver import DPMSolverSampler
+#from ldm.models.diffusion.dpm_solver import DPMSolverSampler
 
 import clip
 from torchvision.transforms import Normalize as Normalize
@@ -399,6 +399,31 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+    
+    def make_linear_decode(model_version, device='cuda:0'):
+        v1_4_rgb_latent_factors = [
+            #   R       G       B
+            [ 0.298,  0.207,  0.208],  # L1
+            [ 0.187,  0.286,  0.173],  # L2
+            [-0.158,  0.189,  0.264],  # L3
+            [-0.184, -0.271, -0.473],  # L4
+        ]
+
+        if model_version[:5] == "sd-v1":
+            rgb_latent_factors = torch.Tensor(v1_4_rgb_latent_factors).to(device)
+        else:
+            raise Exception(f"Model name {model_version} not recognized.")
+
+        def linear_decode(latent):
+            latent_image = latent.permute(0, 2, 3, 1) @ rgb_latent_factors
+            latent_image = latent_image.permute(0, 3, 1, 2)
+            return latent_image
+
+        return linear_decode
+    autoencoder_version = "sd-v1" #TODO this will be different for different models
+    model.linear_decode = make_linear_decode(autoencoder_version, 'cuda')
+
+
     return model
 
 def load_model_from_config(config, ckpt, verbose=False):

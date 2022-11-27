@@ -3,6 +3,7 @@ from IPython import display as disp
 import argparse, sys
 import os
 import subprocess, time, requests
+from urllib.parse import urlparse
 
 
 #os.makedirs(output_path, exist_ok=True)
@@ -10,17 +11,26 @@ import subprocess, time, requests
 model_sha256 = 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556'
 model_url = 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt'
 model_url_runway_1_5 = 'https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt'
-
+model_url_v2 = 'https://huggingface.co/stabilityai/stable-diffusion-2/resolve/main/768-v-ema.ckpt'
+####
 def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
     
   global model_url, model_url_runway_1_5, model_sha256
   if model=='sd-v1-4.ckpt':
       model_f='sd-v1-4.ckpt'
-  if model=='v1-5-pruned-emaonly.ckpt':
+  elif model=='v1-5-pruned-emaonly.ckpt':
       model_f='v1-5-pruned-emaonly.ckpt'
       model_url = model_url_runway_1_5
+  elif model=='768-v-ema.ckpt':
+      model_url = model_url_v2
+      model_f = '768-v-ema.ckpt'
   else:
-      model_f='sd-v1-4.ckpt'
+      model_url = model
+      model_f = urlparse(model_url)
+      model_f = os.path.basename(model_f.path)
+
+  print ('using model', model_f, model_url)
+    
 
 
   models_path = os.path.join(basedir,'models')
@@ -70,9 +80,11 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
               print("Setting up environment...")
               start_time = time.time()
-
+            # ['git', 'clone', 'https://github.com/facebookresearch/xformers', os.path.join(deps_path,'xformers')],
+#                  
               all_process = [
                   ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
+                  ['git', 'clone', 'https://github.com/Stability-AI/stablediffusion', os.path.join(deps_path,'stablediffusion')],
                   ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', os.path.join(deps_path,'AdaBins')],
                   ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', os.path.join(deps_path,'MiDaS')],
                   ['git', 'clone', 'https://github.com/MSFTserver/pytorch3d-lite.git', os.path.join(deps_path,'pytorch3d-lite')],
@@ -83,7 +95,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
                   if print_subprocess:
                       print(running)
 
-              print(subprocess.run(['git', 'clone', 'https://github.com/deforum/k-diffusion/', os.path.join(deps_path,'k-diffusion')], stdout=subprocess.PIPE).stdout.decode('utf-8'))
+              print(subprocess.run(['git', 'clone', 'https://github.com/crowsonkb/k-diffusion/', os.path.join(deps_path,'k-diffusion')], stdout=subprocess.PIPE).stdout.decode('utf-8'))
               with open(os.path.join(deps_path,'k-diffusion/k_diffusion/__init__.py'), 'w') as f:
                   f.write('')
               end_time = time.time()
@@ -92,18 +104,17 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
   if not os.path.exists(os.path.join(basedir,'temp.temp')):
       print('packages setups...')
       p_i=0
+#    ['pip','install','-qq','https://github.com/camenduru/stable-diffusion-webui-colab/releases/download/0.0.14/xformers-0.0.14.dev0-cp37-cp37m-linux_x86_64.whl'],
       
       all_process = [
                   ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
                   ['pip', 'install', 'tensorflow==2.8.0'],
-                  ['pip', 'install', 'gdown','pandas', 'scikit-image', 'opencv-python', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
+                  ['pip', 'install', 'open_clip_torch','torchsde','clean-fid','gdown','pandas', 'scikit-image', 'opencv-python', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq'],
                   ['pip', 'install', 'flask_cors', 'flask_ngrok', 'pyngrok==4.1.1', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'kornia==0.6.7'],
                   ['pip', 'install', '-e', 'git+https://github.com/CompVis/taming-transformers.git@master#egg=taming-transformers','--src',os.path.join(deps_path,'src')],
-                  ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip','--src',os.path.join(deps_path,'src')],
+                  ['pip', 'install', '-e', 'git+https://github.com/openai/CLIP.git@main#egg=clip','--src',os.path.join(deps_path,'src')],         
                   ['apt-get', 'update'],
-                  ['apt-get', 'install', '-y', 'python3-opencv'],
-                  ['apt-get', 'install', '-y', 'ffmpeg']
-          
+                  ['apt-get', 'install', '-y', 'python3-opencv']
               ]
 
       for process in all_process:
@@ -111,7 +122,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
           print(running)
           disp.clear_output(wait=True)
           p_i += 1
-          print('please wait...',p_i,'/',9)
+          print('please wait...',p_i,'/',8)
 
   
       with open(os.path.join(basedir,'temp.temp'), 'w') as f:

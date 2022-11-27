@@ -3,6 +3,7 @@ from IPython import display as disp
 import argparse, sys
 import os
 import subprocess, time, requests
+from urllib.parse import urlparse
 
 
 #os.makedirs(output_path, exist_ok=True)
@@ -11,20 +12,25 @@ model_sha256 = 'fe4efff1e174c627256e44ec2991ba279b3816e364b49f9be2abc0b3ff3f8556
 model_url = 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt'
 model_url_runway_1_5 = 'https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt'
 model_url_v2 = 'https://huggingface.co/stabilityai/stable-diffusion-2/resolve/main/768-v-ema.ckpt'
-
+####
 def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
     
   global model_url, model_url_runway_1_5, model_sha256
   if model=='sd-v1-4.ckpt':
       model_f='sd-v1-4.ckpt'
-  if model=='v1-5-pruned-emaonly.ckpt':
+  elif model=='v1-5-pruned-emaonly.ckpt':
       model_f='v1-5-pruned-emaonly.ckpt'
       model_url = model_url_runway_1_5
-  if model=='768-v-ema.ckpt':
+  elif model=='768-v-ema.ckpt':
       model_url = model_url_v2
       model_f = '768-v-ema.ckpt'
   else:
-      model_f = 'sd-v1-4.ckpt'
+      model_url = model
+      model_f = urlparse(model_url)
+      model_f = os.path.basename(model_f.path)
+
+  print ('using model', model_f, model_url)
+    
 
 
   models_path = os.path.join(basedir,'models')
@@ -75,9 +81,10 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
               print("Setting up environment...")
               start_time = time.time()
             # ['git', 'clone', 'https://github.com/facebookresearch/xformers', os.path.join(deps_path,'xformers')],
+            # ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
 #                  
               all_process = [
-                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
+                  
                   ['git', 'clone', 'https://github.com/Stability-AI/stablediffusion', os.path.join(deps_path,'stablediffusion')],
                   ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', os.path.join(deps_path,'AdaBins')],
                   ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', os.path.join(deps_path,'MiDaS')],
@@ -137,8 +144,7 @@ def sys_extend(basedir):
     deps_path,
     os.path.join(deps_path,'src/taming-transformers'),
     os.path.join(deps_path,'src/clip'),
-    os.path.join(deps_path,'stablediffusion/'),
-    os.path.join(deps_path,'stable-diffusion/'),
+    os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
     os.path.join(deps_path,'k-diffusion'),
     os.path.join(deps_path,'pytorch3d-lite'),
     os.path.join(deps_path,'AdaBins'),
