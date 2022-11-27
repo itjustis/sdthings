@@ -12,7 +12,7 @@ import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 import urllib
-device='cuda'
+
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
 from omegaconf import OmegaConf
@@ -35,6 +35,10 @@ import clip
 from torchvision.transforms import Normalize as Normalize
 from torch.nn import functional as F
 
+device='cuda'
+
+def basename (url):
+    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
 
 ## CLIP -----------------------------------------
 
@@ -375,6 +379,7 @@ def imgtobytes(image):
 
 
 def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
+    model_checkpoint = basename(model_checkpoint)
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
 

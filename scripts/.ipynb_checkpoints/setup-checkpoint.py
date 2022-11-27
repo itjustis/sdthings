@@ -5,6 +5,7 @@ import os
 import subprocess, time, requests
 from urllib.parse import urlparse
 
+from sdthings.scripts.things import basename
 
 #os.makedirs(output_path, exist_ok=True)
 
@@ -26,9 +27,9 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
       model_f = '768-v-ema.ckpt'
   else:
       model_url = model
-      model_f = urlparse(model_url)
-      model_f = os.path.basename(model_f.path)
 
+      model_f = basename(model_url)
+    
   print ('using model', model_f, model_url)
     
 
@@ -81,9 +82,10 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
               print("Setting up environment...")
               start_time = time.time()
             # ['git', 'clone', 'https://github.com/facebookresearch/xformers', os.path.join(deps_path,'xformers')],
+            # ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
 #                  
               all_process = [
-                  ['git', 'clone', 'https://github.com/deforum/stable-diffusion', os.path.join(deps_path,'stable-diffusion')],
+                  
                   ['git', 'clone', 'https://github.com/Stability-AI/stablediffusion', os.path.join(deps_path,'stablediffusion')],
                   ['git', 'clone', 'https://github.com/shariqfarooq123/AdaBins.git', os.path.join(deps_path,'AdaBins')],
                   ['git', 'clone', 'https://github.com/isl-org/MiDaS.git', os.path.join(deps_path,'MiDaS')],
@@ -143,7 +145,7 @@ def sys_extend(basedir):
     deps_path,
     os.path.join(deps_path,'src/taming-transformers'),
     os.path.join(deps_path,'src/clip'),
-    os.path.join(deps_path,'stable-diffusion/'),
+    os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
     os.path.join(deps_path,'k-diffusion'),
     os.path.join(deps_path,'pytorch3d-lite'),
     os.path.join(deps_path,'AdaBins'),
