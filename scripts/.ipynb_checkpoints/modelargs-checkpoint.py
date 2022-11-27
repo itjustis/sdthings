@@ -41,22 +41,32 @@ def defArgs(basedir):
     steps = 12
     scale = 9.3
     midas_weight = 0.3
-    clip_loss_scale = 0.5
-    cutn = 1
-    cut_pow = 0.0001
     
-    
-    colormatch_loss_scale = 0.5
-    
-    grad_threshold_type = 'mean'
+    olormatch_loss_scale = 5000 #@param {type:"number"}
+    colormatch_image = "https://www.saasdesign.io/wp-content/uploads/2021/02/palette-3-min-980x588.png" #@param {type:"string"}
+    colormatch_n_colors = 4 #@param {type:"number"}
+    clamp_grad_threshold = 1. #@param {type:"number"}
+    ignore_sat_scale = 5 #@param 
+
+    blue_loss_scale = 0
+    init_mse_scale = 0 #@param {type:"number"}
+    clip_loss_scale = 0 #@param {type:"number"}
+
+    cutn = 1 #@param {type:"number"}
+    cut_pow = 64 #@param {type:"number"}
+
+
+    grad_threshold_type = 'dynamic' #@param ["dynamic", "static", "mean"]
     gradient_wrt = 'x' #@param ["x", "x0_pred"]
     gradient_add_to = 'both' #@param ["cond", "uncond", "both"]
     decode_method = 'linear' #@param ["autoencoder","linear"]
-    cond_uncond_sync = True
-    
-    clamp_grad_threshold = 0.1
+
+    cond_uncond_sync = True #@param {type:"boolean"}
     save_sample_per_step = False
     show_sample_per_step = False
+    
+    clip_prompts=['']
+    clip_loss_img_scale = 0
     
     
 
