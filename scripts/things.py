@@ -12,6 +12,7 @@ import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 import urllib
+from urllib.parse import urlparse
 
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat

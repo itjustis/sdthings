@@ -5,7 +5,9 @@ import os
 import subprocess, time, requests
 from urllib.parse import urlparse
 
-from sdthings.scripts.things import basename
+def basename (url):
+    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
+
 
 #os.makedirs(output_path, exist_ok=True)
 
@@ -14,6 +16,32 @@ model_url = 'https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/reso
 model_url_runway_1_5 = 'https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt'
 model_url_v2 = 'https://huggingface.co/stabilityai/stable-diffusion-2/resolve/main/768-v-ema.ckpt'
 ####
+def useembedding(model,embedding_path):
+    embedding_type = ".pt" #@param [".bin",".pt"]
+
+    originalpt = r'/workspace/packages/stable-diffusion/ldm/modules/embedding_managerpt.py'
+
+    originalbin = r'/workspace/packages/stable-diffusion/ldm/modules/embedding_managerbin.py'
+
+    if embedding_type == ".pt":
+      file_path = "/workspace/packages/stable-diffusion/ldm/modules/embedding_manager.py"
+      if os.path.isfile(file_path):
+        os.remove(file_path)
+        shutil.copyfile(originalpt, file_path)
+      print('using .pt embedding')
+    elif embedding_type == ".bin":
+      file_path = "/workspace/packages/stable-diffusion/ldm/modules/embedding_manager.py"
+      if os.path.isfile(file_path):
+        os.remove(file_path)
+        shutil.copyfile(originalbin, file_path)
+      print('using .bin embedding')
+    
+
+        #embedding_path= "/workspace/overprettified.pt"
+    model.embedding_manager.load(embedding_path)
+    
+    return model
+
 def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
     
   global model_url, model_url_runway_1_5, model_sha256

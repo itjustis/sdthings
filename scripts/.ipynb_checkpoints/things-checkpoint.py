@@ -12,7 +12,8 @@ import torch.nn as nn
 import torchvision.transforms as T
 import torchvision.transforms.functional as TF
 import urllib
-device='cuda'
+from urllib.parse import urlparse
+
 from contextlib import contextmanager, nullcontext
 from einops import rearrange, repeat
 from omegaconf import OmegaConf
@@ -35,6 +36,10 @@ import clip
 from torchvision.transforms import Normalize as Normalize
 from torch.nn import functional as F
 
+device='cuda'
+
+def basename (url):
+    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
 
 ## CLIP -----------------------------------------
 
@@ -375,6 +380,7 @@ def imgtobytes(image):
 
 
 def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
+    model_checkpoint = basename(model_checkpoint)
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
 
@@ -399,6 +405,31 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
 
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
+    
+    def make_linear_decode(model_version, device='cuda:0'):
+        v1_4_rgb_latent_factors = [
+            #   R       G       B
+            [ 0.298,  0.207,  0.208],  # L1
+            [ 0.187,  0.286,  0.173],  # L2
+            [-0.158,  0.189,  0.264],  # L3
+            [-0.184, -0.271, -0.473],  # L4
+        ]
+
+        if model_version[:5] == "sd-v1":
+            rgb_latent_factors = torch.Tensor(v1_4_rgb_latent_factors).to(device)
+        else:
+            raise Exception(f"Model name {model_version} not recognized.")
+
+        def linear_decode(latent):
+            latent_image = latent.permute(0, 2, 3, 1) @ rgb_latent_factors
+            latent_image = latent_image.permute(0, 3, 1, 2)
+            return latent_image
+
+        return linear_decode
+    autoencoder_version = "sd-v1" #TODO this will be different for different models
+    model.linear_decode = make_linear_decode(autoencoder_version, 'cuda')
+
+
     return model
 
 def load_model_from_config(config, ckpt, verbose=False):

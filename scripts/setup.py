@@ -5,7 +5,9 @@ import os
 import subprocess, time, requests
 from urllib.parse import urlparse
 
-from sdthings.scripts.things import basename
+def basename (url):
+    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
+
 
 #os.makedirs(output_path, exist_ok=True)
 
