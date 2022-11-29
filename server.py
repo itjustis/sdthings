@@ -125,19 +125,19 @@ def parseHeaders(args, headers):
       args.ddim_eta = 0
 
     ######
-    args.use_init=False
+
     args.seed = int(headers["seed"])
     args.prompt = urllib.parse.unquote(headers['prompt'])
-    args.strength = 0
+    args.strength = float(headers['strength'])
     args.steps = int(headers['steps']) 
     args.scale = float(headers['scale'])
     #########
     return args
 
-
+img = ''
 @app.route("/api/img2img", methods=["POST"])
 def img2img():
-    global model,status
+    global model,status,img
     if model != None:
         from sdthings.scripts.things import generate
         from sdthings.scripts.modelargs import makeArgs
@@ -156,23 +156,27 @@ def img2img():
         else:
           args.use_alpha_as_mask = False
           args.use_mask = False
+
             
         data = request.data
+        variation = int(request.headers['variation'])+1
+        if variation == 1:
+            f = BytesIO()
+            f.write(base64.b64decode(data))
+            f.seek(0)
+            if inpaint=="true":
+                img = Image.open(f)
+            else:
+                img = Image.open(f).convert("RGB")
 
-        f = BytesIO()
-        f.write(base64.b64decode(data))
-        f.seek(0)
-        if inpaint=="true":
-            img = Image.open(f)
-        else:
-            img = Image.open(f).convert("RGB")
-            
-        newsize = (W, H)
-        img = img.resize(newsize)
+            newsize = (args.W, args.H)
+
+            img = img.resize(newsize)
 
         args.init_image = img
         args.use_init=True
-        
+
+
         results = generate(model,clip_model,args)
         
         newsize = (args.W_in, args.H_in)
@@ -198,6 +202,7 @@ def txt2img():
         
         args = parseHeaders(args,request.headers)
         args.use_mask = False
+        args.use_init=False
         
         results = generate(model,clip_model,args)
         

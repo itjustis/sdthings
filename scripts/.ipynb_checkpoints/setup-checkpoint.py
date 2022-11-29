@@ -5,6 +5,8 @@ import os, shutil
 import subprocess, time, requests
 from urllib.parse import urlparse
 
+from transformers import logging
+logging.set_verbosity_error()
 def basename (url):
     return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
 

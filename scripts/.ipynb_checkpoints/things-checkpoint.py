@@ -214,10 +214,14 @@ def get_output_folder(output_path, batch_folder):
 
 def load_img(path, shape, use_alpha_as_mask=False):
     # use_alpha_as_mask: Read the alpha channel of the image as the mask image
-    if path.startswith('http://') or path.startswith('https://'):
-        image = Image.open(requests.get(path, stream=True).raw)
-    else:
-        image = Image.open(path)
+    try:
+        if path.startswith('http://') or path.startswith('https://'):
+            image = Image.open(requests.get(path, stream=True).raw)
+        else:
+            image = Image.open(path)
+    except:
+        image = path
+        
 
     if use_alpha_as_mask:
         image = image.convert('RGBA')
