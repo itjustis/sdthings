@@ -68,7 +68,7 @@ model_v = 'sd-v1-4.ckpt'
 #model_v = 'https://huggingface.co/doohickey/doohickey-mega/resolve/main/v3-8000.ckpt'
 #model_v = 'https://huggingface.co/ShinCore/MMDv1-18/resolve/main/MMD%20V1-18%20MODEL%20MERGE%20(TONED%20DOWN)%20ALPHA.ckpt'
 #model_v = 'https://huggingface.co/jinofcoolnes/sammod/resolve/main/samdoartsultmerge.ckpt'
-#model_v = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
+model_v = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
 
 @app.route("/api/check", methods=["POST"])
 def check():
@@ -92,46 +92,6 @@ def setmodel(model_v):
     
     from sdthings.scripts.things import load_model
     model = load_model( model_checkpoint =  model_v ,  basedir = basedir )
-
-
-
-@app.route("/api/img2img", methods=["POST"])
-def img2img():
-    from sdthings.scripts.things import generate
-    return
-
-@app.route("/api/txt2img", methods=["POST"])
-def txt2img():
-    global model,status
-    if model != None:
-        from sdthings.scripts.things import generate
-        from sdthings.scripts.modelargs import makeArgs
-        args = makeArgs(basedir)
-        
-        args = parseHeaders(args,request.headers)
-        args.use_mask = False
-        
-        results = generate(model,clip_model,args)
-        
-        newsize = (args.W_in, args.H_in)
-        imgs=[]
-        #for result in results:
-        img = results[0]
-        img = img.resize(newsize)
-        #    imgs.append(img)
-
-        #return_images=''
-        #for img in imgs:
-        #    return_images=return_images+'_'+imgtobytes(np.asarray(img))
-        return_image = imgtobytes(np.asarray(img))
-
-        return Response(response=return_image, status=200, mimetype="image/png")
-    else:
-        result = 'model not loaded, current status: '+status
-        print (result)
-        
-    return status
-
 
     
 
@@ -175,9 +135,89 @@ def parseHeaders(args, headers):
     return args
 
 
-@app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
+@app.route("/api/img2img", methods=["POST"])
+def img2img():
+    global model,status
+    if model != None:
+        from sdthings.scripts.things import generate
+        from sdthings.scripts.modelargs import makeArgs
+        args = makeArgs(basedir)
+        
+        args = parseHeaders(args,request.headers)
+        args.use_mask = False
+        
+        if not args.sampler in samplers_list:
+            args.sampler = 'euler'
+        inpaint = request.headers["inpaint"]
+        if inpaint=="true":
+          args.use_alpha_as_mask = True
+          args.use_mask = True
+          args.strength = 0.2
+        else:
+          args.use_alpha_as_mask = False
+          args.use_mask = False
+            
+        data = request.data
+
+        f = BytesIO()
+        f.write(base64.b64decode(data))
+        f.seek(0)
+        if inpaint=="true":
+            img = Image.open(f)
+        else:
+            img = Image.open(f).convert("RGB")
+            
+        newsize = (W, H)
+        img = img.resize(newsize)
+
+        args.init_image = img
+        args.use_init=True
+        
+        results = generate(model,clip_model,args)
+        
+        newsize = (args.W_in, args.H_in)
+        imgs=[]
+
+        img = results[0]
+        img = img.resize(newsize)
+        
+        return_image = imgtobytes(np.asarray(img))
+
+        return Response(response=return_image, status=200, mimetype="image/png")
+    else:
+        result = 'model not loaded, current status: '+status
+        return status
+
+@app.route("/api/txt2img", methods=["POST"])
+def txt2img():
+    global model,status
+    if model != None:
+        from sdthings.scripts.things import generate
+        from sdthings.scripts.modelargs import makeArgs
+        args = makeArgs(basedir)
+        
+        args = parseHeaders(args,request.headers)
+        args.use_mask = False
+        
+        results = generate(model,clip_model,args)
+        
+        newsize = (args.W_in, args.H_in)
+        imgs=[]
+        #for result in results:
+        img = results[0]
+        img = img.resize(newsize)
+        #    imgs.append(img)
+
+        #return_images=''
+        #for img in imgs:
+        #    return_images=return_images+'_'+imgtobytes(np.asarray(img))
+        return_image = imgtobytes(np.asarray(img))
+
+        return Response(response=return_image, status=200, mimetype="image/png")
+    else:
+        result = 'model not loaded, current status: '+status
+        return status
+
 
 if __name__ == '__main__': 
     app.run(host='0.0.0.0', port=80)
