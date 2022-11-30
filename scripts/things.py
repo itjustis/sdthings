@@ -384,6 +384,8 @@ def imgtobytes(image):
 
 
 def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
+    from transformers import logging
+    logging.set_verbosity_error()
     model_checkpoint = basename(model_checkpoint)
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
