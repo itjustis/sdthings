@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 
 def basename (url):
-    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
+    return os.path.basename( urlparse(url).path)
 
 
 #os.makedirs(output_path, exist_ok=True)

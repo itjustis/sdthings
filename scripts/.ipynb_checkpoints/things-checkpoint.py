@@ -39,7 +39,7 @@ from torch.nn import functional as F
 device='cuda'
 
 def basename (url):
-    return os.path.basename( urlparse('https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt').path)
+    return os.path.basename( urlparse(url).path)
 
 ## CLIP -----------------------------------------
 
