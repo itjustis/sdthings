@@ -3,6 +3,8 @@ from flask import Flask
 from flask import Flask, Response, request, send_file, abort, stream_with_context
 
 import numpy as np
+
+
 import urllib, base64, random, threading, time
 
 
@@ -13,16 +15,6 @@ from io import BytesIO
 from IPython import display as disp
 import os, sys, random, shutil, json
 from sdthings.scripts.setup import setup,sys_extend, useembedding
-
-import random, os
-from sdthings.scripts import tools
-from sdthings.scripts.modelargs import makeArgs
-from IPython import display as disp
-def clear():
-    disp.clear_output()
-basedir = '/workspace/'
-
-
 
 samplers_list=["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
 fail_res = Response(
@@ -43,16 +35,11 @@ def start_runner():
         global model,status
         print('installing')
         status = 'setups'
-        hugging_face_token = ''
-        model_checkpoint = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
-        sd = tools.Sd(
-            model_checkpoint = model_checkpoint,
-            hugging_face_token = hugging_face_token
-            )
-        
-        #setup(hf = hugging_face_token, model = model_v , basedir = basedir )
-        #status = 'loading'
-        #setmodel(model_v)
+        hugging_face_token = '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'
+
+        setup(hf = hugging_face_token, model = model_v , basedir = basedir )
+        status = 'loading'
+        setmodel(model_v)
         status = 'ready'
         print(status)
 
@@ -190,7 +177,7 @@ def img2img():
         args.use_init=True
 
 
-        results = sd.gen(args)
+        results = generate(model,clip_model,args)
         
         newsize = (args.W_in, args.H_in)
         imgs=[]
@@ -217,14 +204,18 @@ def txt2img():
         args.use_mask = False
         args.use_init=False
         
-        results = sd.gen(args)
+        results = generate(model,clip_model,args)
         
         newsize = (args.W_in, args.H_in)
         imgs=[]
-
+        #for result in results:
         img = results[0]
         img = img.resize(newsize)
-        
+        #    imgs.append(img)
+
+        #return_images=''
+        #for img in imgs:
+        #    return_images=return_images+'_'+imgtobytes(np.asarray(img))
         return_image = imgtobytes(np.asarray(img))
 
         return Response(response=return_image, status=200, mimetype="image/png")
