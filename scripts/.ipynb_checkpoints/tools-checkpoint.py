@@ -10,12 +10,18 @@ from sdthings.scripts.setup import setup, sys_extend, useembedding
 class Sd:
     def __init__(self, model_checkpoint='sd-v1-4.ckpt',hugging_face_token='', basedir='/workspace/'):
         try:
-            from sdthings.scripts.things import load_model
+            if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
+                from sdthings.scripts.things2 import load_model
+            else:
+                from sdthings.scripts.things import load_model
             self.model = load_model( model_checkpoint =  model_checkpoint,  basedir = basedir )
         except:
             setup(hf = hugging_face_token, model = model_checkpoint , basedir = basedir )
             sys_extend(basedir)
-            from sdthings.scripts.things import load_model
+            if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
+                from sdthings.scripts.things2 import load_model
+            else:
+                from sdthings.scripts.things import load_model
             self.model = load_model( model_checkpoint =  model_checkpoint,  basedir = basedir )
                        
     def gen(self,args='', return_latent=False, return_c=False):

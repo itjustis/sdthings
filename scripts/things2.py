@@ -33,6 +33,9 @@ from ldm.models.diffusion.plms import PLMSSampler
 import clip
 from torchvision.transforms import Normalize as Normalize
 from torch.nn import functional as F
+from urllib.parse import urlparse
+def basename (url):
+    return os.path.basename( urlparse(url).path)
 
 
 ## CLIP -----------------------------------------
@@ -294,6 +297,8 @@ def imgtobytes(image):
 def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
     models_path = os.path.join(basedir,'models')
     #@markdown **Select and Load Model**
+    
+    model_checkpoint = basename(model_checkpoint)
 
     model_config = "v1-inference.yaml"
     # config path
@@ -302,8 +307,10 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
         print(f"{ckpt_config_path} exists")
     else:
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
-    if (model_checkpoint == '768-v-ema.ckpt'):
+    if (model_checkpoint == 'v2-1_768-ema-pruned.ckpt'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),'stablediffusion/configs/stable-diffusion/v2-inference-v.yaml')
+        
+    
     
     print(f"Using config: {ckpt_config_path}")
 

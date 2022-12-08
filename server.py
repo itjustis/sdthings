@@ -12,12 +12,12 @@ from io import BytesIO
 
 from IPython import display as disp
 import os, sys, random, shutil, json
-from sdthings.scripts.setup import setup,sys_extend, useembedding
 
 import random, os
 from sdthings.scripts import tools
 from sdthings.scripts.modelargs import makeArgs
 from IPython import display as disp
+
 def clear():
     disp.clear_output()
 basedir = '/workspace/'
@@ -49,10 +49,7 @@ def start_runner():
             model_checkpoint = model_checkpoint,
             hugging_face_token = hugging_face_token
             )
-        
-        #setup(hf = hugging_face_token, model = model_v , basedir = basedir )
-        #status = 'loading'
-        #setmodel(model_v)
+   
         status = 'ready'
         print(status)
 

@@ -174,6 +174,7 @@ def sys_extend(basedir):
     deps_path,
     os.path.join(deps_path,'src/taming-transformers'),
     os.path.join(deps_path,'src/clip'),
+    os.path.join(deps_path,'stablediffusion/'),
     os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
     os.path.join(deps_path,'k-diffusion'),
     os.path.join(deps_path,'pytorch3d-lite'),
