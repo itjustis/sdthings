@@ -9,6 +9,7 @@ from sdthings.scripts.setup import setup, sys_extend, useembedding
 
 class Sd:
     def __init__(self, model_checkpoint='sd-v1-4.ckpt',hugging_face_token='', basedir='/workspace/'):
+        self.model_checkpoint = model_checkpoint
         try:
             if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
                 from sdthings.scripts.things2 import load_model
@@ -25,7 +26,11 @@ class Sd:
             self.model = load_model( model_checkpoint =  model_checkpoint,  basedir = basedir )
                        
     def gen(self,args='', return_latent=False, return_c=False):
-        from sdthings.scripts.things import generate
+        if self.model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
+            from sdthings.scripts.things2 import generate
+        else:
+            from sdthings.scripts.things import generate
+            
         self.clip_model=None
         results = generate(self.model,self.clip_model,args,return_latent,return_c)
         return results

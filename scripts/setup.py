@@ -168,17 +168,29 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
 
 
 
-def sys_extend(basedir):
-  deps_path = os.path.join(basedir,'packages')
-  sys.path.extend([
-    deps_path,
-    os.path.join(deps_path,'src/taming-transformers'),
-    os.path.join(deps_path,'src/clip'),
-    os.path.join(deps_path,'stablediffusion/'),
-    os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
-    os.path.join(deps_path,'k-diffusion'),
-    os.path.join(deps_path,'pytorch3d-lite'),
-    os.path.join(deps_path,'AdaBins'),
-    os.path.join(deps_path,'MiDaS'),
-  ])
+def sys_extend(basedir,model_checkpoint):
+    deps_path = os.path.join(basedir,'packages')
+    if (model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt')):
+        sys.path.extend([
+        deps_path,
+        os.path.join(deps_path,'src/taming-transformers'),
+        os.path.join(deps_path,'src/clip'),
+        os.path.join(deps_path,'stablediffusion'),
+        os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
+        os.path.join(deps_path,'k-diffusion'),
+        os.path.join(deps_path,'pytorch3d-lite'),
+        os.path.join(deps_path,'AdaBins'),
+        os.path.join(deps_path,'MiDaS'),
+      ])
+    else:
+        sys.path.extend([
+        deps_path,
+        os.path.join(deps_path,'src/taming-transformers'),
+        os.path.join(deps_path,'src/clip'),
+        os.path.join(os.path.join(basedir,'sdthings'),'stable-diffusion/'),
+        os.path.join(deps_path,'k-diffusion'),
+        os.path.join(deps_path,'pytorch3d-lite'),
+        os.path.join(deps_path,'AdaBins'),
+        os.path.join(deps_path,'MiDaS'),
+      ])
 
