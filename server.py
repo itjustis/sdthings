@@ -33,6 +33,7 @@ def clear():
 basedir = app_args.basedir
 print('basedir',basedir)
 
+sd=None
 
 samplers_list=["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
 fail_res = Response(
@@ -48,35 +49,10 @@ def imgtobytes(image):
     return content2
 
 
-def start_runner():
-    def installation():
-        global model,status
-        print('installing')
-        status = 'setups'
-        hugging_face_token = ''
-        model_checkpoint = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
-        sd = tools.Sd(
-            model_checkpoint = model_checkpoint,
-            hugging_face_token = hugging_face_token,
-            basedir = basedir
-            )
-   
-        status = 'ready'
-        print(status)
 
-    print('starting runner')
-    thread = threading.Thread(target=installation)
-    thread.start()
 
-def create_app():
-    app = Flask(__name__)
-    def run_on_start(*args, **argv):
-        print ("function before start")
-        start_runner()
-    run_on_start()
-    return app
-
-app = create_app()
+model = None
+clip_model = None
 
 loaded = False
 #sys_extend(basedir)
@@ -89,6 +65,41 @@ model_v = 'sd-v1-4.ckpt'
 #model_v = 'https://huggingface.co/ShinCore/MMDv1-18/resolve/main/MMD%20V1-18%20MODEL%20MERGE%20(TONED%20DOWN)%20ALPHA.ckpt'
 #model_v = 'https://huggingface.co/jinofcoolnes/sammod/resolve/main/samdoartsultmerge.ckpt'
 model_v = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
+status = 'init'
+
+
+
+def start_runner():
+    global sd,status
+    def installation():
+        global sd,status
+        print('installing')
+        status = 'setups'
+        hugging_face_token = ''
+        model_checkpoint = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
+        sd = tools.Sd(
+            model_checkpoint = model_checkpoint,
+            hugging_face_token = hugging_face_token,
+            basedir = basedir
+            )
+        print('model loaded',sd)
+
+   
+        status = 'ready'
+        print(status)
+
+    print('starting runner')
+    thread = threading.Thread(target=installation)
+    thread.start()
+def create_app():
+    app = Flask(__name__)
+    def run_on_start(*args, **argv):
+        print ("function before start")
+        start_runner()
+    run_on_start()
+    return app
+
+app = create_app()
 
 @app.route("/api/check", methods=["POST"])
 def check():
@@ -96,22 +107,21 @@ def check():
       r = request
       headers = r.headers
       if headers["message"] == "hello":
-        return Response(response="{}", status=200)
+        return Response(response="{'status': '"+status+"'}", status=200)
       else:      
         return abort(fail_res)
     except:
       return abort(fail_res)
 
-status = 'init'
 
-model = None
-clip_model = None
 
 def setmodel(model_v):
-    global model,status
+    global sd,status
     
     from sdthings.scripts.things import load_model
-    model = load_model( model_checkpoint =  model_v ,  basedir = basedir )
+    sd.model = load_model( model_checkpoint =  model_v ,  basedir = basedir )
+    print('model loaded')
+    print(sd.model)
 
     
 
@@ -157,8 +167,8 @@ def parseHeaders(args, headers):
 img = ''
 @app.route("/api/img2img", methods=["POST"])
 def img2img():
-    global model,status,img
-    if model != None:
+    global sd,status,img
+    if sd != None:
         from sdthings.scripts.things import generate
         from sdthings.scripts.modelargs import makeArgs
         args = makeArgs(basedir)
@@ -180,7 +190,9 @@ def img2img():
             
         data = request.data
         variation = int(request.headers['variation'])+1
+        print('variation', variation)
         if variation == 1:
+            print(data)
             f = BytesIO()
             f.write(base64.b64decode(data))
             f.seek(0)
@@ -195,7 +207,6 @@ def img2img():
 
         args.init_image = img
         args.use_init=True
-
 
         results = sd.gen(args)
         
@@ -214,17 +225,23 @@ def img2img():
 
 @app.route("/api/txt2img", methods=["POST"])
 def txt2img():
-    global model,status
-    if model != None:
+    global sd, status
+    print('txt2img')
+    if sd != None:
         from sdthings.scripts.things import generate
         from sdthings.scripts.modelargs import makeArgs
         args = makeArgs(basedir)
         
+        
         args = parseHeaders(args,request.headers)
+
+        print(args.prompt)
+        
         args.use_mask = False
         args.use_init=False
         
         results = sd.gen(args)
+        print('generating')
         
         newsize = (args.W_in, args.H_in)
         imgs=[]
@@ -236,8 +253,10 @@ def txt2img():
 
         return Response(response=return_image, status=200, mimetype="image/png")
     else:
+        
         result = 'model not loaded, current status: '+status
-        return status
+        print(result)
+        return Response(response="{'status': '"+status+"'}", status=300)
 
 
 if __name__ == '__main__':
