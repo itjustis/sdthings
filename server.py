@@ -29,6 +29,7 @@ from IPython import display as disp
 
 def clear():
     disp.clear_output()
+  
 basedir = app_args.basedir
 
 
@@ -56,7 +57,8 @@ def start_runner():
         model_checkpoint = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
         sd = tools.Sd(
             model_checkpoint = model_checkpoint,
-            hugging_face_token = hugging_face_token
+            hugging_face_token = hugging_face_token,
+            basedir = basedir
             )
    
         status = 'ready'
