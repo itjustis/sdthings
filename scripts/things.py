@@ -396,7 +396,7 @@ def load_model(model_checkpoint =  "sd-v1-4.ckpt", basedir = '/workspace/'):
     if os.path.exists(ckpt_config_path):
         print(f"{ckpt_config_path} exists")
     else:
-        ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
+        ckpt_config_path = os.path.join(os.path.join(basedir,'sdthings'),"stable-diffusion/configs/stable-diffusion/v1-inference.yaml")
     if (model_checkpoint == '768-v-ema.ckpt'):
         ckpt_config_path = os.path.join(os.path.join(basedir,'packages'),'stablediffusion/configs/stable-diffusion/v2-inference-v.yaml')
     
