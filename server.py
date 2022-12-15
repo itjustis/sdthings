@@ -31,7 +31,7 @@ def clear():
     disp.clear_output()
   
 basedir = app_args.basedir
-
+print('basedir',basedir)
 
 
 samplers_list=["klms","dpm2","dpm2_ancestral","heun","euler","euler_ancestral","plms", "ddim"]
@@ -79,7 +79,6 @@ def create_app():
 app = create_app()
 
 loaded = False
-basedir = '/workspace/'
 #sys_extend(basedir)
 
 
