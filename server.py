@@ -1,6 +1,15 @@
 
 from flask import Flask
 from flask import Flask, Response, request, send_file, abort, stream_with_context
+import argparse
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-nk", "--ngrok", action="store_true")
+parser.add_argument("-b", "--basedir",  default='/workspace/')
+app_args = parser.parse_args()
+
+if app_args.ngrok:
+  from flask_ngrok import run_with_ngrok
 
 import numpy as np
 import urllib, base64, random, threading, time
@@ -20,7 +29,7 @@ from IPython import display as disp
 
 def clear():
     disp.clear_output()
-basedir = '/workspace/'
+basedir = app_args.basedir
 
 
 
@@ -69,7 +78,7 @@ app = create_app()
 
 loaded = False
 basedir = '/workspace/'
-sys_extend(basedir)
+#sys_extend(basedir)
 
 
 model_v = 'sd-v1-4.ckpt'
@@ -230,5 +239,10 @@ def txt2img():
         return status
 
 
-if __name__ == '__main__': 
-    app.run(host='0.0.0.0', port=80)
+if __name__ == '__main__':
+      if app_args.ngrok:
+        print('running with ngrok')
+        run_with_ngrok(app)
+        app.run()
+      else:
+        app.run(host='0.0.0.0', port=80)
