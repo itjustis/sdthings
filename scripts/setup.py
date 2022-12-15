@@ -171,7 +171,7 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
   sys_extend(basedir)
 
 
-def sys_extend(basedir,model_checkpoint):
+def sys_extend(basedir='/workspace/',model_checkpoint='jjj'):
     deps_path = os.path.join(basedir,'packages')
     if (model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt')):
         sys.path.extend([
