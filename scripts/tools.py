@@ -9,6 +9,7 @@ from sdthings.scripts.setup import setup, sys_extend, useembedding
 
 class Sd:
     def __init__(self, model_checkpoint='sd-v1-4.ckpt',hugging_face_token='', basedir='/workspace/'):
+        
         self.model_checkpoint = model_checkpoint
         try:
             if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
