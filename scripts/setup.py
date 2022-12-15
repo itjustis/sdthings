@@ -70,6 +70,8 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
   os.makedirs(deps_path, exist_ok=True)
   os.makedirs(models_path, exist_ok=True)
 
+  print('kkk',os.path.join(models_path, model_f))
+
   if not os.path.exists(os.path.join(models_path, model_f)):
 
       url = model_url
@@ -158,14 +160,15 @@ def setup(hf='none',model='sd-1.4', basedir = '/workspace/'):
   
       with open(os.path.join(basedir,'temp.temp'), 'w') as f:
           f.write('temp')
+  
+  
 
   film_models_folder = os.path.join(basedir,'packages/film_models')
   if not os.path.exists(film_models_folder):  
     os.makedirs(deps_path, exist_ok=True) 
     import gdown
     gdown.download_folder('https://drive.google.com/drive/folders/1q8110-qp225asX3DQvZnfLfJPkCHmDpy', output=film_models_folder, quiet=False, use_cookies=False)
-
-
+  sys_extend(basedir)
 
 
 def sys_extend(basedir,model_checkpoint):
