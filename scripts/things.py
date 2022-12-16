@@ -760,6 +760,9 @@ def generate(model, clip_model, args, return_latent=False, return_sample=False, 
                             cb=callback,
                             verbose=False)
                     else:
+                        if args.x_T != None:
+                            z_enc = x_T
+                            
                         # args.sampler == 'plms' or args.sampler == 'ddim':
                         if init_latent is not None and args.strength > 0:
                             z_enc = sampler.stochastic_encode(init_latent, torch.tensor([t_enc]*batch_size).to(device))
