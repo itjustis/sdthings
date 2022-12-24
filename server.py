@@ -27,8 +27,8 @@ print('basedir',basedir)
 
 sys.path.extend([basedir,os.path.join(basedir,'sdthings')])
 import random, os
-from sdthings.scripts import tools
-from sdthings.scripts.modelargs import makeArgs
+import tools
+from modelargs import makeArgs
 from IPython import display as disp
 
 def clear():
