@@ -1,4 +1,5 @@
 
+
 from flask import Flask
 from flask import Flask, Response, request, send_file, abort, stream_with_context
 import argparse
@@ -21,7 +22,10 @@ from io import BytesIO
 
 from IPython import display as disp
 import os, sys, random, shutil, json
+basedir = app_args.basedir
+print('basedir',basedir)
 
+sys.path.extend([basedir,os.path.join(basedir,'sdthings')])
 import random, os
 from sdthings.scripts import tools
 from sdthings.scripts.modelargs import makeArgs
@@ -30,8 +34,6 @@ from IPython import display as disp
 def clear():
     disp.clear_output()
   
-basedir = app_args.basedir
-print('basedir',basedir)
 
 sd=None
 
