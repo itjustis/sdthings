@@ -25,7 +25,7 @@ import os, sys, random, shutil, json
 basedir = app_args.basedir
 print('basedir',basedir)
 
-#sys.path.extend([basedir,os.path.join(basedir,'sdthings')])
+sys.path.extend([basedir])
 import random, os
 from sdthings.scripts import tools
 from sdthings.scripts.modelargs import makeArgs
