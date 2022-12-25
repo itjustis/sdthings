@@ -1,7 +1,7 @@
 
 
 from flask import Flask
-from flask import Flask, Response, request, send_file, abort, stream_with_context
+from flask import Flask,json, Response, request, send_file, abort, stream_with_context
 import argparse
 parser = argparse.ArgumentParser()
 
@@ -109,7 +109,12 @@ def check():
       r = request
       headers = r.headers
       if headers["message"] == "hello":
-        return Response(response="{'status': '"+status+"'}", status=200)
+        response = app.response_class(
+        response=json.dumps({'status': status}),
+        status=200,
+        mimetype='application/json'
+        )
+        return response
       else:      
         return abort(fail_res)
     except:
