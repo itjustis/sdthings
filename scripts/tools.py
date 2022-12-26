@@ -6,6 +6,8 @@ from IPython import display as disp
 import os, sys, random, shutil, json
 import copy
 
+def clear():
+    disp.clear_output()
 class Sd:
     def __init__(self,basedir='/workspace/',print_subprocess=True, hugging_face_token=''):
       from sdthings.scripts.setup import setup_environment
@@ -23,17 +25,51 @@ class Sd:
     def load(self,model_checkpoint='https://huggingface.co/dreamlike-art/dreamlike-diffusion-1.0/resolve/main/dreamlike-diffusion-1.0.ckpt'):
       from sdthings.scripts.setup import load_model
       load_model(self.root,model_checkpoint)
+        
+    def txt2img(self,input_args, return_latent=False, return_c=False):
+        args = copy.deepcopy(input_args)
+        args.init_latent = None
+        args.strength = 0
+        args.use_init = False
+        args.init_image = None
+        if args.seed == -1:
+            args.seed = random.randint(0, 2**32 - 1)
+
+        results = self.generate(args, self.root,0, return_latent, False, return_c)
+        return results
+    
+    def lat2img(self,input_args,latent=None,strength=0.3):
+        args = copy.deepcopy(input_args)
+        args.init_latent = latent
+        args.strength = strength
+        args.use_init = True
+        args.init_image = None
+        if args.seed == -1:
+            args.seed = random.randint(0, 2**32 - 1)
+        results = self.generate(args, self.root,0, False, False, False)
+        return results
+    
+    def img2img(self,input_args, image=None, strength=0.5, return_latent=False, return_c=False):
+        args = copy.deepcopy(input_args)
+        args.init_latent = None
+        args.strength = strength
+        args.use_init = True
+        args.init_image = image
+        if args.seed == -1:
+            args.seed = random.randint(0, 2**32 - 1)
+        results = self.generate(args, self.root,0, return_latent, False, return_c)
+        return results
       
                        
     def gen(self,input_args='', return_latent=False, return_c=False):
-      args = copy.deepcopy(input_args)
-      if args.seed == -1:
-        args.seed = random.randint(0, 2**32 - 1)
+          args = copy.deepcopy(input_args)
+          if args.seed == -1:
+            args.seed = random.randint(0, 2**32 - 1)
 
-      results = self.generate(args, self.root,0, return_latent, False, return_c)
-      
-      #results = generate(self.model,self.clip_model,args,return_latent,return_c)
-      return results
+          results = self.generate(args, self.root,0, return_latent, False, return_c)
+
+          #results = generate(self.model,self.clip_model,args,return_latent,return_c)
+          return results
 
 
 class Dictionary:
