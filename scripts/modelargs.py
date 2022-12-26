@@ -5,14 +5,14 @@ def Root(basedir='/workspace/'):
     basedir = basedir
     deforum_path = os.path.join( basedir,"deforum-stable-diffusion" )
     models_path = os.path.join( basedir,'models' )
-    configs_path = os.path.join( deforum_path,"deforum-stable-diffusion" )
+    configs_path = os.path.join( deforum_path,"configs" )
     output_path = "output" 
     mount_google_drive=False
    
     model_config = "v1-inference.yaml" 
     model_checkpoint =  "https://huggingface.co/dreamlike-art/dreamlike-diffusion-1.0/resolve/main/dreamlike-diffusion-1.0.ckpt"
-    custom_config_path = ""
-    custom_checkpoint_path = ""
+    custom_config_path = os.path.join( deforum_path,"configs" )
+    custom_checkpoint_path = os.path.join( basedir,'models' )
     half_precision = True
     return locals()
 
