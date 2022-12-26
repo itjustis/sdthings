@@ -51,9 +51,8 @@ def load_model(root,model_f):
   
 
 
-def setup_environment():
+def setup_environment(print_subprocess=True):
     start_time = time.time()
-    print_subprocess = False
     use_xformers_for_colab = True
     #try:
     #    ipy = get_ipython()
@@ -89,6 +88,7 @@ def setup_environment():
                 print(running)
 
         v_card_name = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
+        supported = True
         if 't4' in v_card_name.lower():
             name_to_download = 'T4'
         elif 'v100' in v_card_name.lower():
@@ -108,24 +108,25 @@ def setup_environment():
         elif 'rtx 5000' in v_card_name.lower():
             name_to_download = 'Non-Colab/Paperspace/RTX 5000'
         else:
+            supported = False
             print(v_card_name + ' is currently not supported with xformers flash attention in deforum!')
+        if supported:
+            if 'Non-Colab' in name_to_download:
+                x_ver = 'xformers-0.0.14.dev0-cp39-cp39-linux_x86_64.whl'
+            else:
+                x_ver = 'xformers-0.0.13.dev0-py3-none-any.whl'
 
-        if 'Non-Colab' in name_to_download:
-            x_ver = 'xformers-0.0.14.dev0-cp39-cp39-linux_x86_64.whl'
-        else:
-            x_ver = 'xformers-0.0.13.dev0-py3-none-any.whl'
+            x_link = 'https://github.com/TheLastBen/fast-stable-diffusion/raw/main/precompiled/' + name_to_download + '/' + x_ver
 
-        x_link = 'https://github.com/TheLastBen/fast-stable-diffusion/raw/main/precompiled/' + name_to_download + '/' + x_ver
+            all_process = [
+                ['wget', '--no-verbose', '--no-clobber', x_link],
+                ['pip', 'install', x_ver],
+            ]
 
-        all_process = [
-            ['wget', '--no-verbose', '--no-clobber', x_link],
-            ['pip', 'install', x_ver],
-        ]
-
-        for process in all_process:
-            running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
-            if print_subprocess:
-                print(running)
+            for process in all_process:
+                running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
+                if print_subprocess:
+                    print(running)
     else:
         sys.path.extend([
             'src'
