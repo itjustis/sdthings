@@ -66,6 +66,8 @@ def setup_environment(print_subprocess=True):
         ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'safetensors', 'kornia==0.6.7'],
         ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
         ['pip', 'install', 'accelerate', 'numexpr','ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq','scikit-learn','torchsde','open_clip_torch'],
+        ['apt-get', 'update'],
+        ['apt-get', 'install', '-y', 'python3-opencv']
     ]
     for process in all_process:
         running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
