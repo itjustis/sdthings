@@ -77,6 +77,23 @@ def setup_environment(print_subprocess=True):
         'deforum-stable-diffusion/',
         'deforum-stable-diffusion/src',
     ])
+    dict_dir = 'dictionary'
+    
+    if not os.path.exists(dict_dir):
+
+        dict_urls = [
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_artists.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_flavors.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_mediums.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_movements.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_trendings.pkl',
+        ]
+        dict_dir = 'dictionary'
+        os.makedirs(dict_dir, exist_ok=True)
+        for url in dict_urls:
+            subprocess.run(['wget', url, '-P', dict_dir], stdout=subprocess.PIPE).stdout.decode('utf-8')
+
+
     if use_xformers_for_colab:
 
         print("..installing xformers")
