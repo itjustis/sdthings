@@ -4,39 +4,37 @@ from PIL import Image
 from io import BytesIO
 from IPython import display as disp
 import os, sys, random, shutil, json
-from sdthings.scripts.setup import setup, sys_extend, useembedding
-
+import copy
 
 class Sd:
-    def __init__(self, model_checkpoint='sd-v1-4.ckpt',hugging_face_token='', basedir='/workspace/'):
-        
-        self.model_checkpoint = model_checkpoint
-        try:
-            if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
-                from sdthings.scripts.things2 import load_model
-            else:
-                from sdthings.scripts.things import load_model
-            self.model = load_model( model_checkpoint =  model_checkpoint,  basedir = basedir )
-        except:
-            setup(hf = hugging_face_token, model = model_checkpoint , basedir = basedir )
-            sys_extend(basedir,model_checkpoint)
-            if model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
-                from sdthings.scripts.things2 import load_model
-            else:
-                from sdthings.scripts.things import load_model
-            self.model = load_model( model_checkpoint =  model_checkpoint,  basedir = basedir )
-                       
-    def gen(self,args='', return_latent=False, return_c=False):
-        if self.model_checkpoint.endswith('v2-1_768-ema-pruned.ckpt'):
-            from sdthings.scripts.things2 import generate
-        else:
-            from sdthings.scripts.things import generate
-            
-        self.clip_model=None
-        results = generate(self.model,self.clip_model,args,return_latent,return_c)
-        return results
+    def __init__(self,basedir='/workspace/', hugging_face_token=''):
+      from sdthings.scripts.setup import setup_environment
+      self.basedir = basedir
+      setup_environment()
+      
+      from helpers.generate import generate
+      self.generate = generate
 
-        
+    def makeargs(self):
+      from sdthings.scripts.modelargs import makeArgs
+      self.root, self.args = makeArgs(self.basedir)
+      return self.args
+    
+    def load(self,model_checkpoint='https://huggingface.co/dreamlike-art/dreamlike-diffusion-1.0/resolve/main/dreamlike-diffusion-1.0.ckpt'):
+      from sdthings.scripts.setup import load_model
+      load_model(self.root,model_checkpoint)
+      
+                       
+    def gen(self,input_args='', return_latent=False, return_c=False):
+      args = copy.deepcopy(input_args)
+      if args.seed == -1:
+        args.seed = random.randint(0, 2**32 - 1)
+
+      results = self.generate(args, self.root,0, return_latent, False, return_c)
+      
+      #results = generate(self.model,self.clip_model,args,return_latent,return_c)
+      return results
+
 
 class Dictionary:
     def __init__(self, basedir='/workspace/', folder='dictionary'):

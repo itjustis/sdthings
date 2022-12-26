@@ -1,6 +1,5 @@
 import subprocess, time, gc, os, sys, requests
 from urllib.parse import urlparse
-from helpers.model_load import load_model
 
 def basename (url):
     return os.path.basename( urlparse(url).path)
@@ -40,6 +39,7 @@ def download_model(root,model_url,token=''):
 
 
 def load_model(root,model_f):
+  from helpers.model_load import load_model
   if model_f.startswith('http'):
     model_url = model_f
     model_f = basename(model_url)
