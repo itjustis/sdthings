@@ -7,10 +7,10 @@ import os, sys, random, shutil, json
 import copy
 
 class Sd:
-    def __init__(self,basedir='/workspace/', hugging_face_token=''):
+    def __init__(self,basedir='/workspace/',print_subprocess=True, hugging_face_token=''):
       from sdthings.scripts.setup import setup_environment
       self.basedir = basedir
-      setup_environment()
+      setup_environment(print_subprocess)
       
       from helpers.generate import generate
       self.generate = generate
