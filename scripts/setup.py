@@ -1,4 +1,55 @@
-import subprocess, time, gc, os, sys
+import subprocess, time, gc, os, sys, requests
+from urllib.parse import urlparse
+from helpers.model_load import load_model
+
+def basename (url):
+    return os.path.basename( urlparse(url).path)
+
+def download_model(root,model_url,token=''):
+  models_path = root.models_path
+  model_f = basename(model_url)
+  if not os.path.exists(os.path.join(models_path, model_f)):
+
+      os.makedirs(models_path, exist_ok=True)
+
+      headers = {"Authorization": "Bearer "+token}
+
+      # contact server for model
+      print(f"Attempting to download model...this may take a while")
+      ckpt_request = requests.get(model_url, headers=headers)
+      request_status = ckpt_request.status_code
+
+      # inform user of errors
+      if request_status == 403:
+
+        raise ConnectionRefusedError("You have not accepted the license for this model.")
+      elif request_status == 404:
+        raise ConnectionError("Could not make contact with server")
+      elif request_status != 200:
+        raise ConnectionError(f"Some other error has ocurred - response code: {request_status}")
+
+      if request_status != 200:
+          print(' downloading error : request_status')
+
+      # write to model path
+      if request_status == 200:
+          print('model downloaded!')
+          with open(os.path.join(models_path, model_f), 'wb') as model_file:
+              model_file.write(ckpt_request.content)
+      print('saved to', os.path.join(models_path, model_f))
+
+
+def load_model(root,model_f):
+  if model_f.startswith('http'):
+    model_url = model_f
+    model_f = basename(model_url)
+    download_model(root,model_url)
+  
+  root.model_checkpoint = model_f
+  #root.models_path = os.path.join (root.models_path,model_f)
+  root.model, root.device = load_model(root,load_on_run_all=True, check_sha256=False)
+  
+
 
 def setup_environment():
     start_time = time.time()
