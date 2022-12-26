@@ -60,11 +60,12 @@ class Dictionary:
             self.movements = data['labels']
                        
         self.words = []
+        self.choices = [self.artists,self.flavors,self.mediums,self.movements]
         
-    def gen(self,z,choices):
+    def gen(self,z=1):
         prompt=''
         for x in range(z):
-            library = random.choice(choices)
+            library = random.choice(self.choices)
             prompt+=random.choice(library)+', '
         return prompt
       
