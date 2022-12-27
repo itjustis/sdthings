@@ -24,6 +24,8 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
     seeds=[]
     prompts=[]
     
+    random.seed()
+    
     for k in range(keyframes):
         
         if (random.randint(0,100)>0):
