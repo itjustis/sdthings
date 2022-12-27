@@ -19,6 +19,7 @@ parser.add_argument("-a", "--alpha", default=0.5)
 
 
 app_args = parser.parse_args()
+basedir = app_args.basedir
 
 modelsfolder = os.path.join(basedir,'models')
 
@@ -27,7 +28,7 @@ model_1 = torch.load(os.path.join(modelsfolder,app_args.model2), map_location=de
 theta_0 = model_0["state_dict"]
 theta_1 = model_1["state_dict"]
 alpha = app_args.alpha
-basedir = app_args.basedir
+
 
 
 
