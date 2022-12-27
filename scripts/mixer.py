@@ -27,7 +27,7 @@ model_0 = torch.load(os.path.join(modelsfolder,app_args.model1), map_location=de
 model_1 = torch.load(os.path.join(modelsfolder,app_args.model2), map_location=device)
 theta_0 = model_0["state_dict"]
 theta_1 = model_1["state_dict"]
-alpha = app_args.alpha
+alpha = float( app_args.alpha )
 
 
 
