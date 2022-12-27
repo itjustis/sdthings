@@ -1,0 +1,28 @@
+{
+  "sd-v1-4": {
+        "name": "SD 1.4",
+        "url": "https://huggingface.co/CompVis/stable-diffusion-v-1-4-original/resolve/main/sd-v1-4.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v1-inference.yaml",
+        "quick_hash": "4d9bb824ee6ef0ee7a41be34b6b205b0ada2df29a8b262f9604e23626602dd21",
+        "metadata": {
+            "min_size": 512
+        }
+    },
+  "1.5-pruned-emaonly": {
+        "name": "SD 1.5 Pruned EMA",
+        "url": "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/v1-5-pruned-emaonly.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v1-inference.yaml",
+        "quick_hash": "9e3124731bc30bca9e6d64caaa022870a820f84a46042d9238e914fc6bf6f7ef",
+        "metadata": {
+            "min_size": 512
+        }
+    },
+  "dreamlike-diffusion-1.0": {
+        "name": "dreamlike-diffusion-1.0",
+        "url": "https://huggingface.co/dreamlike-art/dreamlike-diffusion-1.0/resolve/main/dreamlike-diffusion-1.0.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v1-inference.yaml",
+        "metadata": {
+            "min_size": 512
+        }
+    }  
+}
