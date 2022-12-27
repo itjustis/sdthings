@@ -8,13 +8,14 @@ def basename (url):
     return os.path.basename( 
       (url).path)
 
+device='cpu'
 
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-b", "--basedir",  default='/workspace/')
-parser.add_argument("-m1", "--model1", action="store_true")
-parser.add_argument("-m2", "--model2", action="store_true")
-parser.add_argument("-a", "--alpha", action="store_true")
+parser.add_argument("-m1", "--model1", default='')
+parser.add_argument("-m2", "--model2", default='')
+parser.add_argument("-a", "--alpha", default=0.5)
 
 
 app_args = parser.parse_args()
@@ -26,7 +27,7 @@ theta_1 = model_1["state_dict"]
 alpha = app_args.alpha
 basedir = app_args.basedir
 
-device='cpu'
+
 
 modelsfolder = os.path.join(basedir,'models')
 
