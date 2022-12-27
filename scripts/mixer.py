@@ -20,8 +20,10 @@ parser.add_argument("-a", "--alpha", default=0.5)
 
 app_args = parser.parse_args()
 
-model_0 = torch.load(app_args.model1, map_location=device)
-model_1 = torch.load(app_args.model2, map_location=device)
+modelsfolder = os.path.join(basedir,'models')
+
+model_0 = torch.load(os.path.join(modelsfolder,app_args.model1), map_location=device)
+model_1 = torch.load(os.path.join(modelsfolder,app_args.model2), map_location=device)
 theta_0 = model_0["state_dict"]
 theta_1 = model_1["state_dict"]
 alpha = app_args.alpha
@@ -29,7 +31,7 @@ basedir = app_args.basedir
 
 
 
-modelsfolder = os.path.join(basedir,'models')
+
 
 output_file = os.path.join(modelsfolder, f'mix-{str(alpha)[2:] + "0"}.ckpt')
 
