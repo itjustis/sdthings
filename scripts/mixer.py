@@ -1,0 +1,48 @@
+import os
+import torch
+from tqdm import tqdm
+import argparse, os
+from urllib.parse import urlparse
+
+def basename (url):
+    return os.path.basename( 
+      (url).path)
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-b", "--basedir",  default='/workspace/')
+parser.add_argument("-m1", "--model1", action="store_true")
+parser.add_argument("-m2", "--model2", action="store_true")
+parser.add_argument("-a", "--alpha", action="store_true")
+
+
+app_args = parser.parse_args()
+
+model_0 = torch.load(app_args.model1, map_location=device)
+model_1 = torch.load(app_args.model2, map_location=device)
+theta_0 = model_0["state_dict"]
+theta_1 = model_1["state_dict"]
+alpha = app_args.alpha
+basedir = app_args.basedir
+
+device='cpu'
+
+modelsfolder = os.path.join(basedir,'models')
+
+output_file = os.path.join(modelsfolder, f'mix-{str(alpha)[2:] + "0"}.ckpt')
+
+
+for key in tqdm(theta_0.keys(), desc="Stage 1/2"):
+    if "model" in key and key in theta_1:
+        theta_0[key] = (1 - alpha) * theta_0[key] + alpha * theta_1[key]
+
+for key in tqdm(theta_1.keys(), desc="Stage 2/2"):
+    if "model" in key and key not in theta_0:
+        theta_0[key] = theta_1[key]
+
+print("Saving...")
+
+torch.save({"state_dict": theta_0}, output_file)
+
+print("Done!")
