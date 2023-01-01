@@ -32,8 +32,17 @@ class Sd:
         args.strength = 0
         args.use_init = False
         args.init_image = None
+        
         if args.seed == -1:
             args.seed = random.randint(0, 2**32 - 1)
+            
+        if args.c2!= None:
+            if args.init_c == None:
+                c1=self.root.model.get_learned_conditioning(args.prompt)
+            else:
+                c1 = args.init_c
+            cmix=c1*(args.cmix)+args.c2*(1.-args.cmix)
+            args.init_c=cmix
 
         results = self.generate(args, self.root,0, return_latent, False, return_c)
         return results
@@ -46,6 +55,15 @@ class Sd:
         args.init_image = None
         if args.seed == -1:
             args.seed = random.randint(0, 2**32 - 1)
+        
+        if args.c2!= None:
+            if args.init_c == None:
+                c1=self.root.model.get_learned_conditioning(args.prompt)
+            else:
+                c1 = args.init_c
+            cmix=c1*(args.cmix)+args.c2*(1.-args.cmix)
+            args.init_c=cmix
+            
         results = self.generate(args, self.root,0, False, False, False)
         return results
     
@@ -57,6 +75,15 @@ class Sd:
         args.init_image = image
         if args.seed == -1:
             args.seed = random.randint(0, 2**32 - 1)
+        
+        if args.c2!= None:
+            if args.init_c == None:
+                c1=self.root.model.get_learned_conditioning(args.prompt)
+            else:
+                c1 = args.init_c
+            cmix=c1*(args.cmix)+args.c2*(1.-args.cmix)
+            args.init_c=cmix
+            
         results = self.generate(args, self.root,0, return_latent, False, return_c)
         return results
       
