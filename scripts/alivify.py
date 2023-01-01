@@ -4,8 +4,6 @@ from PIL import Image
 import subprocess , os , glob , gc , torch , time , copy , random
 from IPython import display
 import numpy as np
-#lat2img(self,input_args,latent=None,strength=0.3):
-#txt2img(self,input_args, return_latent=False, return_c=False):
 
 def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, genxprompt):
     interpolate=slerp2
@@ -143,6 +141,142 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
         
     return mp4_path
 
+def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, prompts_list):
+    interpolate=slerp2
+    keyframes=len(prompts_list)
+    
+    args = copy.deepcopy(baseargs)
+    
+    all_z=[]
+    all_c=[]
+    all_i=[]
+    framesfolder = os.path.join(sd.basedir ,'frames')
+    os.makedirs(framesfolder, exist_ok=True)
+    outfolder = os.path.join(sd.basedir ,'interpolations')
+    os.makedirs(outfolder, exist_ok=True)
+    seed=1    
+    kiki=0    
+    seeds=[]
+    prompts=[]
+    
+    random.seed()
+    
+    for prompt in prompts_list:
+        
+        args.prompt = prompt[1]
+        args.seed=prompt[0]
+            
+        if kiki==0:
+            seed=args.seed            
+            scale=args.scale
+        
+        
+        prompts.append(args.prompt)        
+        seeds.append(args.seed)
+            
+        print(args.prompt)
+        z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
+
+        all_z.append(z)
+        all_c.append(c)
+        display.display(img)
+        kiki+=1
+        
+        
+    frame = 0
+    
+    i1=0
+    i2=1
+    
+    kf = int(duration/keyframes)
+    files = glob.glob(framesfolder+'/*')
+    for f in files:
+        os.remove(f)
+    
+    c1=all_c[0]
+    z1=all_z[0]
+    
+    c_i = c1
+    z_i = z1
+    
+    for k in range(keyframes):
+        
+        i1=k
+        i2=k+1
+        if i2>keyframes-1:
+            i2=0
+            
+        
+        z1=all_z[i1]
+  
+        с1=all_c[i1]
+        if k>0:
+            c1=c2
+            z1=z2
+        
+        z2=interpolate(z1,all_z[i2],zamp)
+            
+        c2=interpolate(c1,all_c[i2],camp)
+        
+        
+        for f in range(kf):
+            gc.collect()
+            torch.cuda.empty_cache() 
+            t=blend(f/kf,blendmode)            
+            args.ddim_eta=0
+            c = interpolate(c1,c2,t)
+            z = interpolate(z1,z2,t)
+            
+            tf = frame/(kf*keyframes)
+            
+            c = interpolate(c,c_i,tf*0.9)
+            z = interpolate(z,z_i,tf*0.9)
+
+            args.init_c=c
+           
+            img = sd.lat2img(args,z,strength)[0]
+            
+            display.display(img)
+            filename = f"{frame:04}.png"
+            img.save(os.path.join(framesfolder,filename))
+            frame+=1
+            
+    timestring = time.strftime('%Y%m%d%H%M%S')
+    filename = str(timestring)+'.mp4'
+
+    outfile = os.path.join(outfolder,filename)
+    
+    with open(os.path.join(outfolder, str(timestring)+'.txt'), 'w') as f:
+        f.write(str(prompts)+'_'+str(seeds)+'_'+str(args.scale)+'_'+str(strength)+'_'+str(args.sampler)+'_'+str(args.steps)+'_'+str(duration)+'_'+str(zamp)+'_'+str(camp))
+    
+    mp4_path = outfile
+
+    image_path = os.path.join(framesfolder, "%04d.png")
+    #!ffmpeg -y -vcodec png -r {fps} -start_number 0 -i {image_path} -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -crf 7 -preset slow -pattern_type sequence {mp4_path}
+    cmd = [
+        'ffmpeg',
+        '-y',
+        '-vcodec', 'png',
+        '-r', str(fps),
+        '-start_number', str(0),
+        '-i', image_path,
+        '-c:v', 'libx264',
+        '-vf',
+        f'fps={fps}',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '10',
+        '-preset', 'slow',
+        '-pattern_type', 'sequence',
+        mp4_path
+    ]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print(stderr)
+        raise RuntimeError(stderr)
+        
+        
+    return mp4_path
 
 def slerp2(v0, v1, t, DOT_THRESHOLD=0.9995):
     """helper function to spherically interpolate two arrays v1 v2"""
