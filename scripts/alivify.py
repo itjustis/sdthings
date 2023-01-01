@@ -38,7 +38,10 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
         seeds.append(args.seed)
             
         print(args.prompt)
-        z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
+        if args.init_image!= None:
+            z, c, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=True)
+        else:
+            z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
 
         all_z.append(z)
         all_c.append(c)
@@ -96,6 +99,7 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
             z = interpolate(z,z_i,tf*0.9)
 
             args.init_c=c
+            
            
             img = sd.lat2img(args,z,strength)[0]
             
@@ -175,7 +179,10 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         seeds.append(args.seed)
             
         print(args.prompt)
-        z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
+        if args.init_image!= None:
+            z, c, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=True)
+        else:
+            z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
 
         all_z.append(z)
         all_c.append(c)
