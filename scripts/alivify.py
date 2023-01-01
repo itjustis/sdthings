@@ -229,8 +229,10 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             
             tf = frame/(kf*keyframes)
             
-            c = interpolate(c,c_i,tf*0.9)
-            z = interpolate(z,z_i,tf*0.9)
+            if camp<.5:
+                c = interpolate(c,c_i,tf*0.9)
+            if zamp<.5:
+                z = interpolate(z,z_i,tf*0.9)
 
             args.init_c=c
            
