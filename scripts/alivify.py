@@ -107,6 +107,12 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
             filename = f"{frame:04}.png"
             img.save(os.path.join(framesfolder,filename))
             frame+=1
+        z2 = interpolate(z1,z2,1.0)
+        c2 = interpolate(c1,c2,1.0)
+
+        c2 = interpolate(c2,c_i,tf*0.9)
+
+        z2 = interpolate(z2,z_i,tf*0.9)
             
     timestring = time.strftime('%Y%m%d%H%M%S')
     filename = str(timestring)+'.mp4'
