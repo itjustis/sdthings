@@ -180,7 +180,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             seed=args.seed            
             scale=args.scale
             
-        if len(prompts)>2:
+        if len(prompt)>2:
             args.init_image = prompt[2]
         
         
