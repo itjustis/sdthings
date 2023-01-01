@@ -220,10 +220,15 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         if k>0:
             c1=c2
             z1=z2
-        
-        z2=interpolate(z1,all_z[i2],zamp)
             
-        c2=interpolate(c1,all_c[i2],camp)
+        z2=all_z[i2]
+        c2=all_c[i2]
+
+            
+        if zamp<1.:
+            z2=interpolate(z1,z2,zamp)
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
         
         
         for f in range(kf):
@@ -249,6 +254,8 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             filename = f"{frame:04}.png"
             img.save(os.path.join(framesfolder,filename))
             frame+=1
+            
+         #z2 = z
             
     timestring = time.strftime('%Y%m%d%H%M%S')
     filename = str(timestring)+'.mp4'
