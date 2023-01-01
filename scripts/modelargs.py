@@ -31,7 +31,7 @@ def DeforumArgs():
     ddim_eta = 0.0 #@param
     dynamic_threshold = None
     static_threshold = None   
-
+    bit_depth_output = 8
     #@markdown **Save & Display Settings**
     save_samples = True #@param {type:"boolean"}
     save_settings = True #@param {type:"boolean"}
