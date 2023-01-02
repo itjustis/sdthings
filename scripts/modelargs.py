@@ -25,6 +25,8 @@ def DeforumArgs():
     
     c2 = None
     cmix=0.5
+    
+    smoothinterp=False
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
