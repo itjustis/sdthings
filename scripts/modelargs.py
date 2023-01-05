@@ -27,6 +27,10 @@ def DeforumArgs():
     cmix=0.5
     
     smoothinterp=False
+    dynamicstrength = True
+    
+    tmin=0.3
+    tmax=0.95
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
