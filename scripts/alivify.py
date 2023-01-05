@@ -269,7 +269,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             args.init_c=c
 
             if args.dynamicstrength:
-                dynStrength = DynStrength(tLin, strength, args.tmin,args.tmax)
+                dynStrength = DynStrength(tLin, strength, args.smin,args.smax)
             else:
                 dynStrength= strength
                
