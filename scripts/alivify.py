@@ -176,7 +176,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
     
     for prompt in prompts_list:
 
-        if type(prompt)==str:        
+        if type(prompt[1])==str:        
           args.prompt = prompt[1]
         else:
           args.prompt = ''
