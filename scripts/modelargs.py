@@ -29,8 +29,8 @@ def DeforumArgs():
     smoothinterp=False
     dynamicstrength = True
     
-    tmin=0.3
-    tmax=0.95
+    smin=0.3
+    smax=0.95
 
     #@markdown **Sampling Settings**
     seed = -1 #@param
