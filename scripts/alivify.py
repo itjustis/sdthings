@@ -4,6 +4,7 @@ from PIL import Image
 import subprocess , os , glob , gc , torch , time , copy , random
 from IPython import display
 import numpy as np
+import math
 
 def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, genxprompt):
     interpolate=slerp2
@@ -154,6 +155,8 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
 def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, prompts_list):
     interpolate=slerp2
     keyframes=len(prompts_list)
+
+    #my_strength = strength * .5
     
     args = copy.deepcopy(baseargs)
     
@@ -172,8 +175,13 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
     random.seed()
     
     for prompt in prompts_list:
-        
-        args.prompt = prompt[1]
+
+        if type(prompt)==str:        
+          args.prompt = prompt[1]
+        else:
+          args.prompt = ''
+          args.init_c = prompt[1]
+
         args.seed=prompt[0]
             
         if kiki==0:
@@ -184,8 +192,11 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             args.init_image = prompt[2]
         
         
-        prompts.append(args.prompt)        
+        prompts.append(args.prompt)
+        
         seeds.append(args.seed)
+
+        
             
         print(args.prompt)
         if args.init_image!= None:
@@ -243,7 +254,8 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         for f in range(kf):
             gc.collect()
             torch.cuda.empty_cache() 
-            t=blend(f/kf,blendmode)            
+            t=blend(f/kf,blendmode)
+            tLin = (f/kf)            
             args.ddim_eta=0
             c = interpolate(c1,c2,t)
             z = interpolate(z1,z2,t)
@@ -252,12 +264,16 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             
             if args.smoothinterp:
                 c = interpolate(c,c_i,tf*0.9)
-            if args.smoothinterp:
                 z = interpolate(z,z_i,tf*0.9)
 
             args.init_c=c
-           
-            img = sd.lat2img(args,z,strength)[0]
+
+            if args.dynamicstrength:
+                dynStrength = DynStrength(tLin, strength, args.tmin,args.tmax)
+            else:
+                dynStrength= strength
+               
+            img = sd.lat2img(args,z,dynStrength)[0]
             
             display.display(img)
             filename = f"{frame:04}.png"
@@ -268,7 +284,6 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         c2 = interpolate(c1,c2,1.0)
         if args.smoothinterp:
             c2 = interpolate(c2,c_i,tf*0.9)
-        if args.smoothinterp:
             z2 = interpolate(z2,z_i,tf*0.9)
         
             
@@ -339,6 +354,10 @@ def slerp2(v0, v1, t, DOT_THRESHOLD=0.9995):
 def ParametricBlend( t):
   sqt = t * t
   return (sqt / (2.0 * (sqt - t) + 1.0))
+
+def DynStrength(t, strength, tmin,tmax):
+  t = 1 - 2 * abs(.5 - t)
+  return abs(1 - t ** 1.5 / (t ** 1.5 + (1 - t) ** 2.5))*(tmax-tmin)+tmin
 
 def CustomBlend( x):
   r=0
