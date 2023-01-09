@@ -24,8 +24,7 @@
         "metadata": {
             "min_size": 512
         }
-    }  
-},
+    } ,
   "dreamlike-photoreal-2.0": {
         "name": "dreamlike-diffusion-2.0",
         "url": "https://huggingface.co/dreamlike-art/dreamlike-photoreal-2.0/resolve/main/dreamlike-photoreal-2.0.ckpt",
