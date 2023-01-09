@@ -32,5 +32,79 @@
         "metadata": {
             "min_size": 512
         }
-    }  
+    },
+  "2.1-512-ema-pruned": {
+        "name": "SD 2.1 Base 512x512 EMA",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/v2-1_512-ema-pruned.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference.yaml",
+        "quick_hash": "66e52c9507b794f7025f1bda7b97fe948fac9110c87ae5e246a88f2cc9c7cc17",
+        "metadata": {
+            "min_size": 512,
+            "attn_precision": "fp32"
+        }
+    },
+    "2.1-512-ema-pruned-safetensors": {
+        "name": "SD 2.1 Base 512x512 EMA safetensors",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/v2-1_512-ema-pruned.safetensors",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference.yaml",
+        "quick_hash": "4f161a8053ff07da6bbe79366e85f56a8ae13a51f53d5a7089d2f0e0aed343bb",
+        "metadata": {
+            "min_size": 512,
+            "attn_precision": "fp32"
+        }
+    },
+    "2.1-512-nonema-pruned": {
+        "name": "SD 2.1 512x512 NonEMA",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/v2-1_512-nonema-pruned.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference.yaml",
+        "quick_hash": "cfbfae670e20cdc292b8d98c5d3175a01ae5385487d30cb1f25ae3c3839eccd4",
+        "metadata": {
+            "min_size": 512,
+            "attn_precision": "fp32"
+        }
+    },
+    "2.1-512-nonema-pruned-safetensors": {
+        "name": "SD 2.1 512x512 NonEMA safetensors",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1-base/resolve/main/v2-1_512-nonema-pruned.safetensors",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference.yaml",
+        "quick_hash": "5e434e8ad16c5e11003b423487d8cc8cedf2edc0f1c9f6239553c51baec6c7da",
+        "metadata": {
+            "min_size": 512,
+            "attn_precision": "fp32"
+        }
+    },
+
+    "2.1-768-ema-pruned": {
+        "name": "SD 2.1 768x768 Pruned EMA",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference-v.yaml",
+        "quick_hash": "c7283c2e3dbde5dde8b4430ab21d981a48a053388fbc8d693ef663f1e0592555",
+        "metadata": {
+            "min_size": 768,
+            "v_type": true,
+            "attn_precision": "fp32"
+        }
+    },
+    "2.1-768-ema-pruned-safetensors": {
+        "name": "SD 2.1 768x768 Pruned EMA safetensors",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-ema-pruned.safetensors",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference-v.yaml",
+        "quick_hash": "58a32b62ca3ef17a79f1bca270025c012f38628dbb7afcf9e2e0889eaf181d78",
+        "metadata": {
+            "min_size": 768,
+            "v_type": true,
+            "attn_precision": "fp32"
+        }
+    },
+    "2.1-768-nonema-pruned": {
+        "name": "SD 2.1 768x768 Pruned NonEMA",
+        "url": "https://huggingface.co/stabilityai/stable-diffusion-2-1/resolve/main/v2-1_768-nonema-pruned.ckpt",
+        "config_url": "https://raw.githubusercontent.com/easydiffusion/sdkit/main/sdkit/models/models_db/configs/v2.1-inference-v.yaml",
+        "quick_hash": "ed444fd0ed0f69a20961c68b53909272bba0f820efe448a2ab25f100f8823a51",
+        "metadata": {
+            "min_size": 768,
+            "v_type": true,
+            "attn_precision": "fp32"
+        }
+    },
 }
