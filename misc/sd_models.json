@@ -106,5 +106,5 @@
             "v_type": true,
             "attn_precision": "fp32"
         }
-    },
+    }
 }
