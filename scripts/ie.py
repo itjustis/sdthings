@@ -1,4 +1,4 @@
-import torch
+import torch,os
 
 class CLIPConverter(torch.nn.Module):
     def __init__(self):
