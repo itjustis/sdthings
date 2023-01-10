@@ -29,16 +29,9 @@ print('basedir',basedir)
 
 sys.path.extend([basedir])
 
-
-
-
 def clear():
     disp.clear_output()
-  
-
-sd=None
-
-
+    
 fail_res = Response(
             json.dumps({"message": 'error', "code": 400, "status": "FAIL"}),
             mimetype="application/json",
@@ -51,13 +44,20 @@ def imgtobytes(image):
     content2 = encoded_image.tobytes()
     return content2
 
-
+########## inits
 loaded = False
-
 status = 'init'
-
 sd = None
+sessions = []
+########## temp fld
+tempfolder=os.path.join(basedir,'temp')
+os.makedirs(tempfolder, exist_ok = True)
+for f in tempfolder:
+    os.remove(f)
 
+    
+    
+########## all the fun
 def start_runner():
     global sd,status
     def installation():
@@ -70,10 +70,12 @@ def start_runner():
        
         sd = tools.Sd(basedir,False)
         args = sd.makeargs()
-        sd.load()
-        
-        print('model loaded',sd)
-
+        if app_args.model:
+          sd.load(app_args.model)      
+          print('model loaded')
+        else:
+          sd.load()      
+          print('model loaded')
         status = 'ready'
         print(status)
 
@@ -90,34 +92,49 @@ def create_app():
 
 app = create_app()
 
+@app.route("/api/loadmodel", methods=["POST"])
+def load_model():
+  global sd,status
+  try: 
+    ##loading
+    headers = request.headers
+    #
+    modelname = headers["modelname"]
+    #
+    sd.load(modelname)
+    
+    status = ('model loaded')
+    status = ('model not found')
+    status = ('model loaded')
+    print(status)
+  except Exception as e::
+    status = e.message
+    print(status)
+    return Response(response="{'status': '"+status+"'}", status=300)
+    ##return status 
+
+#def setmodel(model_v):
+#    global sd,status
+#    
+#    print('model loaded')
+#    print(sd.model)
+
+
 @app.route("/api/check", methods=["POST"])
 def check():
     try:
-      r = request
-      headers = r.headers
+      headers = request.headers
       if headers["message"] == "hello":
-        response = app.response_class(
-        response=json.dumps({'status': status}),
-        status=200,
-        mimetype='application/json'
-        )
-        return response
+        if headers["session"] == 0 or not headers["session"] in sessions:
+          session = random.randint(0, 2**32 - 1)
+          sessions.append(session)
+          return Response(response="{'status': '"+status+"','session':'"+session+"'}", status=200)
+        else:
+          return Response(response="{'status': '"+status+"'}", status=200)
       else:      
         return abort(fail_res)
     except:
       return abort(fail_res)
-
-
-
-def setmodel(model_v):
-    global sd,status
-    
-    #from sdthings.scripts.things import load_model
-    #sd.model = load_model( model_checkpoint =  model_v ,  basedir = basedir )
-    print('model loaded')
-    print(sd.model)
-
-    
 
 def inpaint():
     return
@@ -159,88 +176,104 @@ img = ''
 @app.route("/api/img2img", methods=["POST"])
 def img2img():
     global sd,status,img
-    if sd != None:
-        from sdthings.scripts.modelargs import defArgs
-        args = defArgs()
-        
-        args = parseHeaders(args,request.headers)
-        args.use_mask = False
-        
-        inpaint = request.headers["inpaint"]
-        if inpaint=="true":
-          args.use_alpha_as_mask = True
-          args.use_mask = True
-          args.strength = 0.2
-        else:
-          args.use_alpha_as_mask = False
+    try:
+      if sd != None:
+          from sdthings.scripts.modelargs import defArgs
+          args = defArgs()
+          headers = request.headers
+
+          args = parseHeaders(args,headers)
+
+          sessionid = request.headers['sessionid']        
+          jobid = request.headers['jobid']
           args.use_mask = False
 
-            
-        data = request.data
-        variation = int(request.headers['variation'])+1
-        print('variation', variation)
-        if variation == 1:
-            #print(data)
-            f = BytesIO()
-            f.write(base64.b64decode(data))
-            f.seek(0)
-            if inpaint=="true":
-                img = Image.open(f)
-            else:
-                img = Image.open(f).convert("RGB")
+          #inpaint?        
+          inpaint = headers["inpaint"]
+          if inpaint=="true":
+            args.use_alpha_as_mask = True
+            args.use_mask = True
+            args.strength = 0.2
+          else:
+            args.use_alpha_as_mask = False
+            args.use_mask = False
 
-            newsize = (args.W, args.H)
+          #process            
+          data = request.data
+          variation = int(headers['variation'])+1
+          print('variation', variation)
+          if variation == 1:
+              #decode
+              #print(data)
+              f = BytesIO()
+              f.write(base64.b64decode(data))
+              f.seek(0)
+              if inpaint=="true":
+                  img = Image.open(f)
+              else:
+                  img = Image.open(f).convert("RGB")
 
-            img = img.resize(newsize)
-       
+              newsize = (args.W, args.H)
 
-        results = sd.img2img(args, image=img, strength=args.strength)
-        
-        newsize = (args.W_in, args.H_in)
-        imgs=[]
+              img = img.resize(newsize)
+              fn = f'{sessionid}_{jobid}'
+              fn = os.path.join(tempfolder,fn+'.jpg')
+              img.save
+          #####
+          status='busy'
+          results = sd.img2img(args, image=img, strength=args.strength)
+          status='ready'         
+          
+          newsize = (args.W_in, args.H_in)
+          imgs=[]
 
-        img = results[0]
-        img = img.resize(newsize)
-        
-        return_image = imgtobytes(np.asarray(img))
+          img = results[0]
+          img = img.resize(newsize)
 
-        return Response(response=return_image, status=200, mimetype="image/png")
-    else:
-        result = 'model not loaded, current status: '+status
-        return status
+          #color correct
+
+          return_image = imgtobytes(np.asarray(img))
+
+          return Response(response=return_image, status=200, mimetype="image/png")
+      else:
+          result = 'model not loaded, current status: '+status
+          return Response(response="{'status': '"+result+"'}", status=300)
+    except Exception as e::
+      error = e.message
+      print(status,error)
+      return Response(response="{'status': '"+status+"','error':'"+error+"'}", status=666)
 
 @app.route("/api/txt2img", methods=["POST"])
 def txt2img():
     global sd, status
     print('txt2img')
-    if sd != None:
-        from sdthings.scripts.modelargs import defArgs
-        
-        args = defArgs()
-        
-        
-        args = parseHeaders(args,request.headers)
+    try:
+      if sd != None:
+          from sdthings.scripts.modelargs import defArgs
 
-        print(args.prompt)
+          args = defArgs()
+          args = parseHeaders(args,request.headers)
+          #####
+          status='busy'
+          results = sd.txt2img(args)
+          status='ready'
+          #####
+          newsize = (args.W_in, args.H_in)
+          imgs=[]
+          img = results[0]
+          img = img.resize(newsize)
+          return_image = imgtobytes(np.asarray(img))
+          return Response(response=return_image, status=200, mimetype="image/png")
+      else:
+          result = 'model not loaded, current status: '+status
+          print(result)
+          return Response(response="{'status': '"+status+"'}", status=300)
+        
+     except Exception as e::
+      error = e.message
+      print(status,error)
+      return Response(response="{'status': '"+status+"','error':'"+error+"'}", status=666)
 
-        
-        results = sd.txt2img(args)
-        print('generating')
-        
-        newsize = (args.W_in, args.H_in)
-        imgs=[]
-
-        img = results[0]
-        img = img.resize(newsize)
-        
-        return_image = imgtobytes(np.asarray(img))
-
-        return Response(response=return_image, status=200, mimetype="image/png")
-    else:
-        
-        result = 'model not loaded, current status: '+status
-        print(result)
-        return Response(response="{'status': '"+status+"'}", status=300)
 
 
 if __name__ == '__main__':
