@@ -67,7 +67,8 @@ def setup_environment(print_subprocess=True):
         ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
         ['pip', 'install', 'accelerate', 'numexpr','ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'opencv-python', 'timm', 'torchdiffeq','scikit-learn','torchsde','open_clip_torch'],
         ['apt-get', 'update'],
-        ['apt-get', 'install', '-y', 'python3-opencv']
+        ['apt-get', 'install', '-y', 'python3-opencv'],
+        ['pip', 'install', '--upgrade', '--no-cache-dir', 'gdown']
     ]
     for process in all_process:
         running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
