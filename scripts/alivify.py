@@ -260,11 +260,13 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             c = interpolate(c1,c2,t)
             z = interpolate(z1,z2,t)
             
-            tf = frame/(kf*keyframes)
+            tf = blend(frame/(kf*keyframes),'parametric')
+            
+            print (f,t,'-',tf)
             
             if args.smoothinterp:
-                c = interpolate(c,c_i,tf*0.9)
-                z = interpolate(z,z_i,tf*0.9)
+                c = interpolate(c,c_i,tf)
+                z = interpolate(z,z_i,tf)
 
             args.init_c=c
 
@@ -283,8 +285,8 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         z2 = interpolate(z1,z2,1.0)
         c2 = interpolate(c1,c2,1.0)
         if args.smoothinterp:
-            c2 = interpolate(c2,c_i,tf*0.9)
-            z2 = interpolate(z2,z_i,tf*0.9)
+            c2 = interpolate(c2,c_i,tf)
+            z2 = interpolate(z2,z_i,tf)
         
             
     timestring = time.strftime('%Y%m%d%H%M%S')
