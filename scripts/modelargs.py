@@ -29,6 +29,8 @@ def DeforumArgs():
     smoothinterp=False
     dynamicstrength = True
     
+    uc = None
+    
     smin=0.3
     smax=0.95
 
