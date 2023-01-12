@@ -1,5 +1,6 @@
-
-
+####
+####
+####
 from flask import Flask
 from flask import Flask,json, Response, request, send_file, abort, stream_with_context
 import argparse
@@ -53,6 +54,7 @@ sessions = []
 tempfolder=os.path.join(basedir,'temp')
 os.makedirs(tempfolder, exist_ok = True)
 for f in tempfolder:
+  if f.endswith('.jpg') or f.endswith('.png'):
     os.remove(f)
 
     
@@ -107,7 +109,7 @@ def load_model():
     status = ('model not found')
     status = ('model loaded')
     print(status)
-  except Exception as e::
+  except Exception as e:
     status = e.message
     print(status)
     return Response(response="{'status': '"+status+"'}", status=300)
@@ -238,7 +240,7 @@ def img2img():
       else:
           result = 'model not loaded, current status: '+status
           return Response(response="{'status': '"+result+"'}", status=300)
-    except Exception as e::
+    except Exception as e:
       error = e.message
       print(status,error)
       return Response(response="{'status': '"+status+"','error':'"+error+"'}", status=666)
@@ -269,7 +271,7 @@ def txt2img():
           print(result)
           return Response(response="{'status': '"+status+"'}", status=300)
         
-     except Exception as e::
+    except Exception as e:
       error = e.message
       print(status,error)
       return Response(response="{'status': '"+status+"','error':'"+error+"'}", status=666)
