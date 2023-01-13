@@ -25,8 +25,14 @@ modelsfolder = os.path.join(basedir,'models')
 
 model_0 = torch.load(os.path.join(modelsfolder,app_args.model1), map_location=device)
 model_1 = torch.load(os.path.join(modelsfolder,app_args.model2), map_location=device)
-theta_0 = model_0["state_dict"]
-theta_1 = model_1["state_dict"]
+try:
+    theta_0 = model_0["state_dict"]
+except:
+    theta_0 = model_0
+try:
+    theta_1 = model_1["state_dict"]
+except:
+    theta_1 = model_1
 alpha = float( app_args.alpha )
 
 
