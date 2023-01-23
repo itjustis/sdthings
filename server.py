@@ -87,6 +87,7 @@ def start_runner():
     
 def create_app():
     app = Flask(__name__)
+    
     def run_on_start(*args, **argv):
         start_runner()
     run_on_start()
@@ -124,19 +125,23 @@ def load_model():
 
 @app.route("/api/check", methods=["POST"])
 def check():
+    #print(request.headers)
     try:
       headers = request.headers
       if headers["message"] == "hello":
-        if headers["session"] == 0 or not headers["session"] in sessions:
+        if int(headers["session"]) == 0 or not headers["session"] in sessions:
           session = random.randint(0, 2**32 - 1)
           sessions.append(session)
-          return Response(response="{'status': '"+status+"','session':'"+session+"'}", status=200)
+          return Response(response="{'status': '"+status+"','session':'"+str(session)+"'}", status=200)
         else:
           return Response(response="{'status': '"+status+"'}", status=200)
       else:      
         return abort(fail_res)
-    except:
-      return abort(fail_res)
+    except Exception as e:
+      
+      print(e)
+      return Response(response="{'status': '"+status+"'}", status=400)
+      #return abort(fail_res)
 
 def inpaint():
     return
@@ -279,6 +284,7 @@ def txt2img():
 
 
 if __name__ == '__main__':
+      app.debug = False
       if app_args.ngrok:
         print('running with ngrok')
         run_with_ngrok(app)
