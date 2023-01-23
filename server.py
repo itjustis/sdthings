@@ -190,9 +190,13 @@ def img2img():
           headers = request.headers
 
           args = parseHeaders(args,headers)
-
-          sessionid = request.headers['sessionid']        
-          jobid = request.headers['jobid']
+          try:
+            sessionid = request.headers['sessionid'] 
+            jobid = request.headers['jobid']       
+          except:
+            sessionid = 0
+            jobid = 0
+          
           args.use_mask = False
 
           #inpaint?        
@@ -209,6 +213,8 @@ def img2img():
           data = request.data
           variation = int(headers['variation'])+1
           print('variation', variation)
+          fn = f'{sessionid}_{jobid}'
+          fn = os.path.join(tempfolder,fn+'.jpg')
           if variation == 1:
               #decode
               #print(data)
@@ -223,19 +229,25 @@ def img2img():
               newsize = (args.W, args.H)
 
               img = img.resize(newsize)
-              fn = f'{sessionid}_{jobid}'
-              fn = os.path.join(tempfolder,fn+'.jpg')
-              img.save
+              
+              img.save(fn)
+          img = fn
           #####
           status='busy'
           results = sd.img2img(args, image=img, strength=args.strength)
-          status='ready'         
+          status='ready'  
+
+          print(fn)
+                 
           
           newsize = (args.W_in, args.H_in)
           imgs=[]
+          imgo= Image.open(fn)
+          disp.display(img)
 
           img = results[0]
           img = img.resize(newsize)
+          print('resized')
 
           #color correct
 
@@ -246,7 +258,7 @@ def img2img():
           result = 'model not loaded, current status: '+status
           return Response(response="{'status': '"+result+"'}", status=300)
     except Exception as e:
-      error = e.message
+      error = e
       print(status,error)
       return Response(response="{'status': '"+status+"','error':'"+error+"'}", status=666)
 
