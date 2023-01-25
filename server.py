@@ -21,7 +21,7 @@ import urllib, base64, random, threading, time
 
 from PIL import Image
 from io import BytesIO
-
+from skimage.exposure import match_histograms
 
 from IPython import display as disp
 import os, sys, random, shutil, json,random
@@ -263,8 +263,19 @@ def img2img():
 
           gc.collect()
           torch.cuda.empty_cache()
+          
 
           #color correct
+          try:
+            correction = (headers["histogram_correction"])
+            if correction == 'true':
+              x = img.astype('float32')
+              y = np.asarray(args.init_image).astype('float32')
+              img = match_histograms(x, y,multichannel=True)
+            print('correcting histogram')
+          except:
+            correction = 'false'
+            print('correction is false')
 
           return_image = imgtobytes(np.asarray(img))
 
