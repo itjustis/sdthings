@@ -73,6 +73,9 @@ def start_runner():
         sd = tools.Sd(basedir,False)
         args = sd.makeargs()
         if app_args.model:
+          import torch,gc
+          gc.collect()
+          torch.cuda.empty_cache()
           sd.load(app_args.model)      
           print('model loaded')
         else:
@@ -98,7 +101,11 @@ app = create_app()
 @app.route("/api/loadmodel", methods=["POST"])
 def load_model():
   global sd,status
-  try: 
+  try:
+    import torch,gc
+    del sd.model
+    gc.collect()
+    torch.cuda.empty_cache()
     ##loading
     headers = request.headers
     #
@@ -182,6 +189,7 @@ def parseHeaders(args, headers):
 img = ''
 @app.route("/api/img2img", methods=["POST"])
 def img2img():
+    import gc,torch
     global sd,status,img
     try:
       if sd != None:
@@ -228,6 +236,8 @@ def img2img():
 
               newsize = (args.W, args.H)
 
+              print ('resizing to ',newsize,'generation size', args.W,args.H)
+
               img = img.resize(newsize)
               
               img.save(fn)
@@ -248,6 +258,11 @@ def img2img():
           img = results[0]
           img = img.resize(newsize)
           print('resized')
+
+         
+
+          gc.collect()
+          torch.cuda.empty_cache()
 
           #color correct
 
