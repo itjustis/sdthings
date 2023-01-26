@@ -207,22 +207,14 @@ def img2img():
           
           args.use_mask = False
 
-          #inpaint?        
           inpaint = headers["inpaint"]
-          if inpaint=="true":
-            args.use_alpha_as_mask = True
-            args.use_mask = True
-            args.strength = 0.2
-          else:
-            args.use_alpha_as_mask = False
-            args.use_mask = False
 
           #process            
           data = request.data
           variation = int(headers['variation'])+1
           print('variation', variation)
           fn = f'{sessionid}_{jobid}'
-          fn = os.path.join(tempfolder,fn+'.jpg')
+          fn = os.path.join(tempfolder,fn+'.png')
           if variation == 1:
               #decode
               #print(data)
@@ -243,6 +235,19 @@ def img2img():
               img.save(fn)
           img = fn
           #####
+          #inpaint?        
+
+          if inpaint=="true":
+            args.use_alpha_as_mask = True
+            args.use_mask = True
+            args.invert_mask = False
+            args.strength = 0.
+            #red, green, blue, alpha = Image.open(img).split()
+            args.mask_file= img
+            print('trying to inpaint')
+          else:
+            args.use_alpha_as_mask = False
+            args.use_mask = False
           status='busy'
           results = sd.img2img(args, image=img, strength=args.strength)
           status='ready'  
