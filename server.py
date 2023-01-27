@@ -271,16 +271,16 @@ def img2img():
           
 
           #color correct
-          try:
-            correction = (headers["histogram_correction"])
-            if correction == 'true':
-              x = img.astype('float32')
-              y = np.asarray(args.init_image).astype('float32')
-              img = match_histograms(x, y,multichannel=True)
-            print('correcting histogram')
-          except:
-            correction = 'false'
-            print('correction is false')
+          print('correcting',img)
+         
+          x = np.asarray(img).astype('float32')
+          print('opening',fn)
+          y = np.asarray(Image.open(fn)).astype('float32')
+          print('matching')
+          img = match_histograms(x, y,multichannel=True)
+          print('correction done')
+
+       
 
           return_image = imgtobytes(np.asarray(img))
 
