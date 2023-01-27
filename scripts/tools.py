@@ -5,17 +5,69 @@ from io import BytesIO
 from IPython import display as disp
 import os, sys, random, shutil, json
 import copy
-
+import torch
+from types import SimpleNamespace
+    
 def clear():
     disp.clear_output()
 class Sd:
     def __init__(self,basedir='/workspace/',print_subprocess=True, hugging_face_token=''):
-      from sdthings.scripts.setup import setup_environment
-      self.basedir = basedir
-      setup_environment(print_subprocess)
+        from sdthings.scripts.setup import setup_environment
+        self.basedir = basedir
+        setup_environment(print_subprocess)
       
-      from helpers.generate import generate
-      self.generate = generate
+        from helpers.generate import generate
+        self.generate = generate
+        
+       
+        def MixingArgs():
+
+              num_variations = 3
+              use_lats = True 
+              latent_power = 0.1 
+              ranomize_latent_power = False 
+              #
+              use_interrogator = True 
+              interrogator_weight = 0.5
+              randomize_interrogator_weight = False 
+              interrogator_mode = 'fast' 
+              interrogator_max_flavors = 8 
+
+              use_text_prompt = False 
+              text_prompt_weight = 0.2 
+              text_prompt=''
+
+              return locals()
+
+        self.mixargs = SimpleNamespace(**MixingArgs())
+    ###
+    
+    def autoc(self,image, mix=0.4, mode='fast', best_max_flavors=32):
+
+        try:
+            if image.endswith('.png') or image.endswith('.jpg') or image.endswith('.jpeg'):
+                img = Image.open(image).resize((512,512))
+        except:
+                img = image
+        c=self.ie.enc(img).detach()            
+        interrogator_prompt = self.inference(img,mode,best_max_flavors)
+        intc = self.root.model.get_learned_conditioning(interrogator_prompt).detach()
+        c = (c*mix)+(intc*(1.0-mix))
+        return c
+      
+        
+    ###
+    def inference(self,image, mode, best_max_flavors=32):
+            self.interrogator.config.chunk_size = 2048 if self.interrogator.config.clip_model_name == "ViT-L-14/openai" else 1024
+            self.interrogator.config.flavor_intermediate_count = 2048 if self.interrogator.config.clip_model_name == "ViT-L-14/openai" else 1024
+            image = image.convert('RGB')
+            if mode == 'best':
+                return self.interrogator.interrogate(image, max_flavors=int(best_max_flavors))
+            elif mode == 'classic':
+                return self.interrogator.interrogate_classic(image)
+            else:
+                return self.interrogator.interrogate_fast(image)
+
 
     def makeargs(self):
       from sdthings.scripts.modelargs import makeArgs
