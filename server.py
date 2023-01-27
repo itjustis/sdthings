@@ -57,7 +57,25 @@ for f in tempfolder:
   if f.endswith('.jpg') or f.endswith('.png'):
     os.remove(f)
 
-    
+from sdthings.scripts.ie import CLIPConverter, ImageEncoder
+
+def iencloader(basedir='/workspace/'):
+        from sdthings.scripts.ie import CLIPConverter, ImageEncoder
+        ie = ImageEncoder(basedir,'ien3.pth')
+        
+        
+        from clip_interrogator import Config, Interrogator
+        
+        clip_model_name = 'ViT-L-14/openai' #@param ["ViT-L-14/openai", "ViT-H-14/laion2b_s32b_b79k"]
+
+        config = Config()
+        config.blip_num_beams = 64
+        config.blip_offload = False
+        config.clip_model_name = clip_model_name
+        print(config)
+        interrogator = Interrogator(config)
+        
+        return ie, interrogator
     
 ########## all the fun
 def start_runner():
@@ -70,7 +88,10 @@ def start_runner():
         #model_checkpoint = 'https://huggingface.co/nitrosocke/redshift-diffusion/resolve/main/redshift-diffusion-v1.ckpt'
         from sdthings.scripts import tools
        
+       
         sd = tools.Sd(basedir,False)
+        sd.ie, sd.interrogator = iencloader(basedir)
+        
         args = sd.makeargs()
         if app_args.model:
           import torch,gc
@@ -248,6 +269,14 @@ def img2img():
           else:
             args.use_alpha_as_mask = False
             args.use_mask = False
+          
+          if args.prompt == 'auto' or args.prompt == 'auto ':
+                print('auto prompt')
+                args.c2 = sd.autoc(img)
+                args.cmix = 0.0
+          else:
+                print('prompt is:',args.prompt)
+                
           status='busy'
           results = sd.img2img(args, image=img, strength=args.strength)
           status='ready'  
@@ -275,7 +304,7 @@ def img2img():
          
           x = np.asarray(img).astype('float32')
           print('opening',fn)
-          y = np.asarray(Image.open(fn)).astype('float32')
+          y = np.asarray(Image.open(fn).convert('RGB')).astype('float32')
           print('matching')
           img = match_histograms(x, y,multichannel=True)
           print('correction done')
