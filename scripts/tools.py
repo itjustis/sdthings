@@ -55,7 +55,7 @@ class Sd:
         intc = self.root.model.get_learned_conditioning(interrogator_prompt).detach()
         import random
         #mix = random.randint(2,9)/10.
-        mix = args.icmix
+        #mix = self.args.icmix
         c = (c*mix)+(intc*(1.0-mix))
         return c
       
@@ -202,8 +202,4 @@ class Dictionary:
                        else:
                             if len(line)>1:
                                         self.words.append(line)
-                       
-              
-                       
-                       
-                       
+                    
