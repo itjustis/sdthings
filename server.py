@@ -273,6 +273,8 @@ def img2img():
           if args.prompt == 'auto' or args.prompt == 'auto ':
                 print('auto prompt')
                 args.c2 = sd.autoc(img)
+                
+                args.icmix = random.randint(2,9)/10.
                 args.cmix = 0.0
           else:
                 print('prompt is:',args.prompt)
