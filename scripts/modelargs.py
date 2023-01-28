@@ -25,7 +25,7 @@ def DeforumArgs():
     
     c2 = None
     cmix=0.5
-    
+    icmix=0.5
     smoothinterp=False
     dynamicstrength = True
     
