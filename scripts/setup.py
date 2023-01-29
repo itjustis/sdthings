@@ -61,8 +61,10 @@ def setup_environment(print_subprocess=True):
     #if 'google.colab' in str(ipy):
     print("..setting up environment")
     #['git', 'clone', '-b', 'dev', 'https://github.com/deforum-art/deforum-stable-diffusion'],
+    #['pip', 'install', 'open_clip_torch']
+    
     all_process = [
-        ['pip', 'install', 'open_clip_torch'],
+
         ['pip', 'install', 'clip-interrogator'],
         ['pip', 'install', 'git+https://github.com/pharmapsychotic/BLIP.git'],
         ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
