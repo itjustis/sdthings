@@ -15,9 +15,11 @@ class Sd:
         from sdthings.scripts.setup import setup_environment
         self.basedir = basedir
         setup_environment(print_subprocess)
-      
+        print('setup complete')
+        
         from helpers.generate import generate
         self.generate = generate
+        print('init 1')
         
        
         def MixingArgs():
@@ -40,6 +42,7 @@ class Sd:
               return locals()
 
         self.mixargs = SimpleNamespace(**MixingArgs())
+        print('init 2')
     ###
     
     def autoc(self,image, mix=0.4, mode='fast', best_max_flavors=32):
