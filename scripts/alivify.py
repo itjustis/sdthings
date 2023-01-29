@@ -6,8 +6,12 @@ from IPython import display
 import numpy as np
 import math
 
-def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, genxprompt):
+
+def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames):
     interpolate=slerp2
+    keyframes=len(frames)
+
+    #my_strength = strength * .5
     
     args = copy.deepcopy(baseargs)
     
@@ -16,36 +20,77 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
     all_i=[]
     framesfolder = os.path.join(sd.basedir ,'frames')
     os.makedirs(framesfolder, exist_ok=True)
-    outfolder = os.path.join(sd.basedir ,'alivify')
+    outfolder = os.path.join(sd.basedir ,'interpolations')
     os.makedirs(outfolder, exist_ok=True)
     seed=1    
     kiki=0    
-    seeds=[]
-    prompts=[]
-    
+   
     random.seed()
     
-    for k in range(keyframes):
+    frlen = length(frames)
+    clen = length(conditions)
+    
+    all_c=[]
+    
+    frame = 0
+    
+    i1=0
+    i2=1    
+    
+    kf = int(duration/keyframes)
+    
+    cf = int(duration/clen)
+    
+    c1=conditions[0]
+    
+    c_i = c1
+    
+    for k in range(clen):
         
-        if (random.randint(0,100)>0):
-            args.prompt = genxprompt()
+        i1=k
+        i2=k+1
+        if i2>keyframes-1:
+            i2=0
             
-        if kiki==0:
-            seed=args.seed            
+        с1=conditions[i1]
+        if k>0:
+            c1=c2
+        c2=conditions[i2]
+
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
+            
+        for f in range(cf):
+            t=blend(f/cf,blendmode)
+            c = interpolate(c1,c2,t)
+            all_c.append(c)
+
+
+    print ('all_c len is :', length(all_c),'frames len is',length(frames))
+
+    ########
+    
+    kiki = 0    
+    for seed,frame in zip(seeds,frames):
+        
+        args.prompt = ''
+        args.init_c = all_c[kiki]
+
+        args.seed=seed
+            
+        if kiki==0:          
             scale=args.scale
-        
-        args.seed=random.randint(0,4294967295)        
-        prompts.append(args.prompt)        
-        seeds.append(args.seed)
             
-        print(args.prompt)
+        if len(prompt)>2:
+            args.init_image = frame
+        
         if args.init_image!= None:
-            z, c, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=True)
+            z, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=False)
         else:
-            z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
+            z, img = sd.txt2img(args, return_latent=True, return_c=False)
 
         all_z.append(z)
-        all_c.append(c)
+        
         display.display(img)
         kiki+=1
         
@@ -55,7 +100,7 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
     i1=0
     i2=1
     
-    kf = int(duration/keyframes)
+    
     files = glob.glob(framesfolder+'/*')
     for f in files:
         os.remove(f)
@@ -72,7 +117,6 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
         i2=k+1
         if i2>keyframes-1:
             i2=0
-            
         
         z1=all_z[i1]
   
@@ -80,40 +124,53 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
         if k>0:
             c1=c2
             z1=z2
-        
-        z2=interpolate(z1,all_z[i2],zamp)
             
-        c2=interpolate(c1,all_c[i2],camp)
+        z2=all_z[i2]
+        c2=all_c[i2]
+            
+        if zamp<1.:
+            z2=interpolate(z1,z2,zamp)
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
         
         
         for f in range(kf):
             gc.collect()
             torch.cuda.empty_cache() 
-            t=blend(f/kf,blendmode)            
+            t=blend(f/kf,'linear')
+            tLin = (f/kf)            
             args.ddim_eta=0
             c = interpolate(c1,c2,t)
             z = interpolate(z1,z2,t)
             
-            tf = frame/(kf*keyframes)
+            tf = blend(frame/(kf*keyframes),'parametric')
             
-            c = interpolate(c,c_i,tf*0.9)
-            z = interpolate(z,z_i,tf*0.9)
+            print (f,t,'-',tf)
+            
+            if args.smoothinterp:
+                c = interpolate(c,c_i,tf)
+                z = interpolate(z,z_i,tf)
 
             args.init_c=c
-            
-           
-            img = sd.lat2img(args,z,strength)[0]
+
+            if args.dynamicstrength:
+                dynStrength = DynStrength(tLin, strength, args.smin,args.smax)
+            else:
+                dynStrength= strength
+               
+            img = sd.lat2img(args,z,dynStrength)[0]
             
             display.display(img)
             filename = f"{frame:04}.png"
             img.save(os.path.join(framesfolder,filename))
             frame+=1
+            
         z2 = interpolate(z1,z2,1.0)
         c2 = interpolate(c1,c2,1.0)
-
-        c2 = interpolate(c2,c_i,tf*0.9)
-
-        z2 = interpolate(z2,z_i,tf*0.9)
+        if args.smoothinterp:
+            c2 = interpolate(c2,c_i,tf)
+            z2 = interpolate(z2,z_i,tf)
+        
             
     timestring = time.strftime('%Y%m%d%H%M%S')
     filename = str(timestring)+'.mp4'
@@ -151,6 +208,7 @@ def alivify( sd,baseargs,keyframes,duration,fps,zamp,camp,strength,blendmode, ge
         
         
     return mp4_path
+
 
 def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, prompts_list):
     interpolate=slerp2
