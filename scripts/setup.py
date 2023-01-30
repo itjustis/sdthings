@@ -60,11 +60,12 @@ def setup_environment(print_subprocess=True):
         import torch
         
         all_process = [
-            ['pip', 'install', 'omegaconf', 'einops==0.4.1', 'pytorch-lightning==1.7.7', 'torchmetrics', 'transformers', 'safetensors', 'kornia'],
+            ['pip', 'install', 'omegaconf', 'einops==0.4.1', 'pytorch-lightning==1.7.7', 'torchmetrics', 'transformers==4.21.2', 'safetensors', 'kornia'],
             ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
             ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq','scikit-learn','torchsde','open-clip-torch','numpngw','numexpr','opencv-python'],
             ['apt-get', 'update'],
-            ['apt-get', 'install', '-y', 'python3-opencv']
+            ['apt-get', 'install', '-y', 'python3-opencv'],
+            ['pip', 'install', '--upgrade', '--no-cache-dir', 'gdown']
         ]
         for process in all_process:
             running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
@@ -86,5 +87,21 @@ def setup_environment(print_subprocess=True):
                 if print_subprocess:
                     print(running)
     end_time = time.time()
+    dict_dir = 'dictionary'
+    
+    if not os.path.exists(dict_dir):
+
+        dict_urls = [
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_artists.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_flavors.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_mediums.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_movements.pkl',
+            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_trendings.pkl',
+        ]
+        dict_dir = 'dictionary'
+        os.makedirs(dict_dir, exist_ok=True)
+        for url in dict_urls:
+            subprocess.run(['wget', url, '-P', dict_dir], stdout=subprocess.PIPE)
+
     print(f"..environment set up in {end_time-start_time:.0f} seconds")
     return
