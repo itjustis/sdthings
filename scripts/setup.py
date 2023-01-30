@@ -54,109 +54,37 @@ def load_model(root,model_f):
 def setup_environment(print_subprocess=True):
     start_time = time.time()
     use_xformers_for_colab = True
-    #try:
-    #    ipy = get_ipython()
-    #except:
-    #    ipy = 'could not get_ipython'
-    #if 'google.colab' in str(ipy):
-    print("..setting up environment")
-    #['git', 'clone', '-b', 'dev', 'https://github.com/deforum-art/deforum-stable-diffusion'],
-    #
-    #['pip', 'install', 'open_clip_torch'],
-    #['pip', 'install', 'clip-interrogator'],
-    #['pip', 'install', 'git+https://github.com/pharmapsychotic/BLIP.git'],
-    all_process = [
-        
-        ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
-        ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'safetensors', 'kornia==0.6.7'],
-        ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
-        ['pip', 'install', 'accelerate', 'scikit-image','numexpr','ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'opencv-python', 'timm', 'torchdiffeq','scikit-learn','torchsde','open_clip_torch'],
-        
-        ['apt-get', 'update'],
-        ['apt-get', 'install', '-y', 'python3-opencv'],
-        ['pip', 'install', '--upgrade', '--no-cache-dir', 'gdown']
-    ]
-    for process in all_process:
-        running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
-        if print_subprocess:
-            print(running)
-    with open('deforum-stable-diffusion/src/k_diffusion/__init__.py', 'w') as f:
-        f.write('')
-    sys.path.extend([
-        'deforum-stable-diffusion/',
-        'deforum-stable-diffusion/src',
-    ])
-    dict_dir = 'dictionary'
+    installit=True
     
-    if not os.path.exists(dict_dir):
-
-        dict_urls = [
-            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_artists.pkl',
-            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_flavors.pkl',
-            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_mediums.pkl',
-            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_movements.pkl',
-            'https://huggingface.co/pharma/ci-preprocess/resolve/main/ViT-L-14_openai_trendings.pkl',
+    if installit:
+        import torch
+        
+        all_process = [
+            ['pip', 'install', 'omegaconf', 'einops==0.4.1', 'pytorch-lightning==1.7.7', 'torchmetrics', 'transformers', 'safetensors', 'kornia'],
+            ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
+            ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'timm', 'torchdiffeq','scikit-learn','torchsde','open-clip-torch','numpngw','numexpr','opencv-python'],
+            ['apt-get', 'update'],
+            ['apt-get', 'install', '-y', 'python3-opencv']
         ]
-        dict_dir = 'dictionary'
-        os.makedirs(dict_dir, exist_ok=True)
-        for url in dict_urls:
-            subprocess.run(['wget', url, '-P', dict_dir], stdout=subprocess.PIPE).stdout.decode('utf-8')
-
-
-    if use_xformers_for_colab:
-
-        print("..installing xformers")
-
-        all_process = [['pip', 'install', 'triton==2.0.0.dev20220701']]
         for process in all_process:
             running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
             if print_subprocess:
                 print(running)
+        with open('deforum-stable-diffusion/src/k_diffusion/__init__.py', 'w') as f:
+            f.write('')
+        sys.path.extend([
+            'deforum-stable-diffusion/',
+            'deforum-stable-diffusion/src',
+        ])
+        if use_xformers_for_colab:
 
-        v_card_name = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], stdout=subprocess.PIPE).stdout.decode('utf-8')
-        supported = True
-        if 't4' in v_card_name.lower():
-            name_to_download = 'T4'
-        elif 'v100' in v_card_name.lower():
-            name_to_download = 'V100'
-        elif 'a100' in v_card_name.lower():
-            name_to_download = 'A100'
-        elif 'p100' in v_card_name.lower():
-            name_to_download = 'P100'
-        elif 'a4000' in v_card_name.lower():
-            name_to_download = 'Non-Colab/Paperspace/A4000'
-        elif 'p5000' in v_card_name.lower():
-            name_to_download = 'Non-Colab/Paperspace/P5000'
-        elif 'quadro m4000' in v_card_name.lower():
-            name_to_download = 'Non-Colab/Paperspace/Quadro M4000'
-        elif 'rtx 4000' in v_card_name.lower():
-            name_to_download = 'Non-Colab/Paperspace/RTX 4000'
-        elif 'rtx 5000' in v_card_name.lower():
-            name_to_download = 'Non-Colab/Paperspace/RTX 5000'
-        else:
-            supported = False
-            print(v_card_name + ' is currently not supported with xformers flash attention in deforum!')
-        if supported:
-            if 'Non-Colab' in name_to_download:
-                x_ver = 'xformers-0.0.14.dev0-cp39-cp39-linux_x86_64.whl'
-            else:
-                x_ver = 'xformers-0.0.13.dev0-py3-none-any.whl'
+            print("..installing triton and xformers")
 
-            x_link = 'https://github.com/TheLastBen/fast-stable-diffusion/raw/main/precompiled/' + name_to_download + '/' + x_ver
-
-            all_process = [
-                ['wget', '--no-verbose', '--no-clobber', x_link],
-                ['pip', 'install', x_ver],
-            ]
-
+            all_process = [['pip', 'install', 'triton==2.0.0.dev20221202', 'xformers==0.0.16rc424']]
             for process in all_process:
                 running = subprocess.run(process,stdout=subprocess.PIPE).stdout.decode('utf-8')
                 if print_subprocess:
                     print(running)
-    else:
-        sys.path.extend([
-            'src'
-        ])
     end_time = time.time()
     print(f"..environment set up in {end_time-start_time:.0f} seconds")
     return
