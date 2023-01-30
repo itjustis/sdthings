@@ -13,7 +13,7 @@ def gen_prompt(vars,au):
         prompts.append(p)
     return (prompts)
 
-def interpolate_keyframes(odir,basedir,d):
+def interpolate_keyframes(odir,basedir,d,debug=True):
     film_models_folder = os.path.join(basedir,'packages/film_models')
     frames = []
     for frame in sorted(os.listdir(odir)):
@@ -22,30 +22,80 @@ def interpolate_keyframes(odir,basedir,d):
             frames.append(int(frame.split('.')[0]))
     print(frames)
 
+    nf=frames
     for i in range(len(frames)):
+        print('___')
 
         i2=i+1
         if i2==len(frames):
             i2=0
             
         f1, f2 = frames[i],frames[i2]
+        
 
         f3 = f1 +( d // 2 )
-        print(f1,f2,'>',f3)
+        print(f1,f2,'>',f3,'______1')
+        nf.append(f3)
         output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f2,),"%02d" % (f3,),odir,film_models_folder))
+        if (debug):
+            print (err)
         
-        #while (d<
-        
-        if d==4:
+        if d>3:
             
             f4 = f1 + ( d // 4 )
-            print(f1,f3,'>',f4)
+            print(f1,f3,'>',f4,'______2')
+            nf.append(f4)
             output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f3,),"%02d" % (f4,),odir,film_models_folder))
+            if (debug):
+                print (err)
+        
             f5 = f3 + ( d // 4 )
-            print(f3,f2,'>',f5)
+            print(f3,f2,'>',f5,'______3')
+            nf.append(f5)
             output, err = (interpolate_frames("%02d" % (f3,),"%02d" % (f2,),"%02d" % (f5,),odir,film_models_folder))
+            if (debug):
+                print (err)
+            
+            
+        if d>5:
+            
+            f6 = f4 + ( d // 6 )
+            print(f4,f5,'>',f6,'______4')
+            nf.append(f6)
+            output, err = (interpolate_frames("%02d" % (f4,),"%02d" % (f5,),"%02d" % (f6,),odir,film_models_folder))
+            if (debug):
+                print (err)
+        
+            f7 = f5 + ( d // 6 )
+            print(f5,f2,'>',f7,'______5')
+            nf.append(f7)
+            output, err = (interpolate_frames("%02d" % (f5,),"%02d" % (f2,),"%02d" % (f7,),odir,film_models_folder))
+            if (debug):
+                print (err)
+        
+        if d>7:
+            
+            f8 = f3 + ( d // 8 )
+            print(f3,f7,'>',f8,'______6')
+            nf.append(f8)
+            output, err = (interpolate_frames("%02d" % (f3,),"%02d" % (f7,),"%02d" % (f8,),odir,film_models_folder))
+            if (debug):
+                print (err)
+        
+            f9 = f1 + ( d // 8 )
+            print(f1,f4,'>',f9,'______7')
+            nf.append(f9)
+            output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f4,),"%02d" % (f9,),odir,film_models_folder))
+            if (debug):
+                print (err)
+            
+        
             
         print('FILM pre-interpolating done')
+
+            
+        print('______')
+
 
 
 def interpolate_frames(f1,f2,f3,odir,film_models_folder):
