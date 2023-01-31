@@ -27,8 +27,8 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
    
     random.seed()
     
-    frlen = length(frames)
-    clen = length(conditions)
+    frlen = len(frames)
+    clen = len(conditions)
     
     all_c=[]
     
@@ -49,7 +49,7 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
         
         i1=k
         i2=k+1
-        if i2>keyframes-1:
+        if i2>(clen)-1:
             i2=0
             
         с1=conditions[i1]
@@ -66,7 +66,7 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             all_c.append(c)
 
 
-    print ('all_c len is :', length(all_c),'frames len is',length(frames))
+    print ('all_c len is :', len(all_c),'frames len is',len(frames))
 
     ########
     
@@ -81,8 +81,7 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
         if kiki==0:          
             scale=args.scale
             
-        if len(prompt)>2:
-            args.init_image = frame
+        args.init_image = frame
         
         if args.init_image!= None:
             z, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=False)
