@@ -22,7 +22,6 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
             frames.append(int(frame.split('.')[0]))
     print(frames)
     
-    
     nf=[]
     for f in frames: 
       nf.append(f)
@@ -84,18 +83,20 @@ def interpolate_frames(f1,f2,f3,odir,film_models_folder):
   output, err = process.communicate()
   return(output, err)
 
-def prepare_frames(inputs_folder,folder, sz, d):
+def prepare_frames(indir, outdir, sz, d):
     i=1
     ki=1
     z = []
-    sdir = os.path.join(inputs_folder,folder)
-    odir = os.path.join(inputs_folder,'interpolated/'+folder)
+    #sdir = os.path.join(inputs_folder,folder)
+    #odir = os.path.join(inputs_folder,'interpolated/'+folder)
+    sdir = indir
+    odir = outdir
 
     os.makedirs(odir, exist_ok=True)
     for file in os.listdir(odir):
         file = os.path.join(odir,file)
         os.remove(file)
-    for image_file_name in os.listdir(sdir):
+    for image_file_name in sorted(os.listdir(sdir)):
         if image_file_name.endswith(".jpg") or image_file_name.endswith(".jpeg") or image_file_name.endswith(".gif") or image_file_name.endswith(".png") or image_file_name.endswith(".bmp"):
             p  = os.path.join( sdir, image_file_name)
             t  = os.path.join( odir, "%02d" % (i,)+'.png') 
@@ -107,10 +108,7 @@ def prepare_frames(inputs_folder,folder, sz, d):
             i+=d
             ki+=1
 
-    for k in range(ki):
-        f = k
-    
-
+            
 
 def unzip_inputs(folder):
   for z in os.listdir(folder):
