@@ -18,8 +18,9 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
     frames = []
     for frame in sorted(os.listdir(odir)):
         if frame.endswith('.png'):
-            print(int(frame.split('.')[0]))
             frames.append(int(frame.split('.')[0]))
+    
+    frames = sorted(frames)
     print(frames)
     
     nf=[]
@@ -42,7 +43,6 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
                 i2=0
 
               if abs(sorted(nf)[i2]-sorted(nf)[i])>1:
-
                 f1, f2 = sorted(nf)[i],sorted(nf)[i2]
                 if ( abs(sorted(nf)[i2]-sorted(nf)[i])>d*2-1):
                   mx=d//md
@@ -66,22 +66,32 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
 
 
 def interpolate_frames(f1,f2,f3,odir,film_models_folder):
-  model_path=os.path.join(film_models_folder,'film_net/Style/saved_model')
-  command = ['python3', 
-       '-m', 
-       'packages.frame_interpolation.eval.interpolator_test',
-       '--frame1',
-       os.path.join(odir,f1+'.png'),
-       '--frame2',
-       os.path.join(odir,f2+'.png'),
-       '--model_path',
-       model_path,
-       '--output_frame',
-       os.path.join(odir,f3+'.png'),
-       ]
-  process = Popen(command, stdout=PIPE, stderr=PIPE)
-  output, err = process.communicate()
-  return(output, err)
+    
+    FILM = False
+    
+    if FILM:
+
+        model_path=os.path.join(film_models_folder,'film_net/Style/saved_model')
+        command = ['python3', 
+           '-m', 
+           'packages.frame_interpolation.eval.interpolator_test',
+           '--frame1',
+           os.path.join(odir,f1+'.png'),
+           '--frame2',
+           os.path.join(odir,f2+'.png'),
+           '--model_path',
+           model_path,
+           '--output_frame',
+           os.path.join(odir,f3+'.png'),
+           ]
+    else:
+        command = ['ifrnet-ncnn-vulkan-20220720-ubuntu/ifrnet-ncnn-vulkan',
+                   '-0', os.path.join(odir,f1+'.png'),
+                   '-1', os.path.join(odir,f2+'.png'),
+                   '-o', os.path.join(odir,f3+'.png')]
+    process = Popen(command, stdout=PIPE, stderr=PIPE)
+    output, err = process.communicate()
+    return(output, err)
 
 def prepare_frames(indir, outdir, sz, d):
     i=1
@@ -103,7 +113,7 @@ def prepare_frames(indir, outdir, sz, d):
             img = cv2.imread(p)
             img = cv2.resize(img, (sz[0], sz[1]))
             cv2.imwrite(t, img)
-            print (i, ki)
+            #print (i, ki)
             z.append(i)
             i+=d
             ki+=1
