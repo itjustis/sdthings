@@ -7,7 +7,7 @@ import numpy as np
 import math
 
 
-def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames):
+def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames, dynamicprompt=None, dmix=0.5):
     interpolate=slerp2
     keyframes=len(frames)
 
@@ -142,6 +142,8 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             c = interpolate(c1,c2,t)
             z = interpolate(z1,z2,t)
             
+            
+            
             tf = blend(frame/(kf*keyframes),'parametric')
             
             print (f,t,'-',tf)
@@ -149,6 +151,11 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             if args.smoothinterp:
                 c = interpolate(c,c_i,tf)
                 z = interpolate(z,z_i,tf)
+                
+            if dynamicprompt != None:
+                cd = dynamicprompt(frame,int( keyframes*kf ))
+                cd = sd.root.model.get_learned_conditioning(cd)
+                c = cd*dmix + (c* (1.-dmix))
 
             args.init_c=c
 
