@@ -190,7 +190,6 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
 
     image_path = os.path.join(framesfolder, "%04d.png")
     #!ffmpeg -y -vcodec png -r {fps} -start_number 0 -i {image_path} -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -crf 7 -preset slow -pattern_type sequence {mp4_path}
-    
     return image_path,fps,mp4_path
     
 
