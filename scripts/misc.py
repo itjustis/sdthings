@@ -2,6 +2,24 @@ import zipfile, os, cv2, random
 
 import subprocess
 from subprocess import Popen, PIPE
+from PIL import Image
+
+from sldl.video.video_interpolation import VideoInterpolation
+vi = VideoInterpolation()
+ifrmodel = vi.model.to('cuda')
+from sldl.video.ifrnet import IFRNet, ifnet_inference
+import torch
+from PIL import Image
+from torchvision import transforms
+device = torch.device('cuda')
+precision = torch.float16
+model_path='/workspace/film_net_fp16.pt'
+
+model = torch.jit.load(model_path, map_location='cpu')
+model.eval().to(device=device, dtype=precision)
+
+
+
 
 def gen_prompt(vars,au):
     prompts=[]
@@ -13,7 +31,7 @@ def gen_prompt(vars,au):
         prompts.append(p)
     return (prompts)
 
-def interpolate_keyframes(odir,basedir,d,debug=True):
+def interpolate_keyframes(odir,basedir,d,FILM=True):
     film_models_folder = os.path.join(basedir,'packages/film_models')
     frames = []
     for frame in sorted(os.listdir(odir)):
@@ -54,9 +72,8 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
                   f3 = abs(f1-f2)//2+f1
 
                 print(f1,f2,'>',f3)
-                output, err = (interpolate_frames("%02d" % (f1,),"%02d" % (f2,),"%02d" % (f3,),odir,film_models_folder))
-                if (debug):
-                    print (err)
+                interpolate_frames("%02d" % (f1,),"%02d" % (f2,),"%02d" % (f3,),odir,film_models_folder,FILM)
+                
                 nf.append(f3)
               else:
                 i+=1    
@@ -65,33 +82,36 @@ def interpolate_keyframes(odir,basedir,d,debug=True):
 
 
 
-def interpolate_frames(f1,f2,f3,odir,film_models_folder):
+def interpolate_frames(f1,f2,f3,odir,film_models_folder,FILM):
     
-    FILM = False
+
     
     if FILM:
+        
+        img1 = transforms.ToTensor()(Image.open(os.path.join(odir,f1+'.png'))).unsqueeze_(0).to(precision).to(device)
+        img3 = transforms.ToTensor()(Image.open(os.path.join(odir,f2+'.png'))).unsqueeze_(0).to(precision).to(device)
+        img1 = img1-torch.min(img1)
+        img1 = img1/torch.max(img1)
+        img3 = img3-torch.min(img3)
+        img3 = img3/torch.max(img3)
+        dt = img1.new_full((1, 1), .5)
+        
+        with torch.no_grad():
+            img2 = model(img1, img3, dt) 
 
-        model_path=os.path.join(film_models_folder,'film_net/Style/saved_model')
-        command = ['python3', 
-           '-m', 
-           'packages.frame_interpolation.eval.interpolator_test',
-           '--frame1',
-           os.path.join(odir,f1+'.png'),
-           '--frame2',
-           os.path.join(odir,f2+'.png'),
-           '--model_path',
-           model_path,
-           '--output_frame',
-           os.path.join(odir,f3+'.png'),
-           ]
+        img2 = img2-torch.min(img2)
+        img2 = img2/torch.max(img2)
+
+        im = transforms.ToPILImage()(img2[0]).convert("RGB") 
+        
+        im.save(os.path.join(odir,f3+'.png'))
+  
     else:
-        command = ['ifrnet-ncnn-vulkan-20220720-ubuntu/ifrnet-ncnn-vulkan',
-                   '-0', os.path.join(odir,f1+'.png'),
-                   '-1', os.path.join(odir,f2+'.png'),
-                   '-o', os.path.join(odir,f3+'.png')]
-    process = Popen(command, stdout=PIPE, stderr=PIPE)
-    output, err = process.communicate()
-    return(output, err)
+        pred_frame = ifnet_inference(ifrmodel, Image.open(os.path.join(odir,f1+'.png')), Image.open(os.path.join(odir,f2+'.png')), 'cuda')
+       
+        pred_frame.save(os.path.join(odir,f3+'.png'))
+    
+    return
 
 def prepare_frames(indir, outdir, sz, d):
     i=1
