@@ -72,7 +72,7 @@ def interpolate_keyframes(odir,basedir,d,FILM=True):
                   f3 = abs(f1-f2)//2+f1
 
                 print(f1,f2,'>',f3)
-                interpolate_frames("%02d" % (f1,),"%02d" % (f2,),"%02d" % (f3,),odir,film_models_folder,FILM)
+                interpolate_frames("%05d" % (f1,),"%05d" % (f2,),"%05d" % (f3,),odir,film_models_folder,FILM)
                 
                 nf.append(f3)
               else:
@@ -129,7 +129,7 @@ def prepare_frames(indir, outdir, sz, d):
     for image_file_name in sorted(os.listdir(sdir)):
         if image_file_name.endswith(".jpg") or image_file_name.endswith(".jpeg") or image_file_name.endswith(".gif") or image_file_name.endswith(".png") or image_file_name.endswith(".bmp"):
             p  = os.path.join( sdir, image_file_name)
-            t  = os.path.join( odir, "%02d" % (i,)+'.png') 
+            t  = os.path.join( odir, "%05d" % (i,)+'.png') 
             img = cv2.imread(p)
             img = cv2.resize(img, (sz[0], sz[1]))
             cv2.imwrite(t, img)
