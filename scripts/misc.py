@@ -13,7 +13,7 @@ from PIL import Image
 from torchvision import transforms
 device = torch.device('cuda')
 precision = torch.float16
-model_path='/workspace/film_net_fp16.pt'
+model_path='film_net_fp16.pt'
 
 model = torch.jit.load(model_path, map_location='cpu')
 model.eval().to(device=device, dtype=precision)
