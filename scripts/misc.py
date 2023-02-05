@@ -1,186 +1,467 @@
-import zipfile, os, cv2, random
-
-import subprocess
-from subprocess import Popen, PIPE
+from torch import autocast
+from einops import rearrange, repeat
 from PIL import Image
-
-from sldl.video.video_interpolation import VideoInterpolation
-vi = VideoInterpolation()
-ifrmodel = vi.model.to('cuda')
-from sldl.video.ifrnet import IFRNet, ifnet_inference
-import torch
-from PIL import Image
-from torchvision import transforms
-device = torch.device('cuda')
-precision = torch.float16
-model_path='film_net_fp16.pt'
-
-model = torch.jit.load(model_path, map_location='cpu')
-model.eval().to(device=device, dtype=precision)
+import subprocess , os , glob , gc , torch , time , copy , random
+from IPython import display
+import numpy as np
+import math
 
 
+def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames, dynamicprompt=None, dmix=0.5):
+    interpolate=slerp2
+    keyframes=len(frames)
 
-
-def gen_prompt(vars,au):
-    prompts=[]
-    for i in range(au):
-        random.seed()
-        p = ''
-        for v in vars:
-            p+=random.choice(v)
-        prompts.append(p)
-    return (prompts)
-
-def interpolate_keyframes(odir,basedir,d,FILM=True):
-    film_models_folder = os.path.join(basedir,'packages/film_models')
-    frames = []
-    for frame in sorted(os.listdir(odir)):
-        if frame.endswith('.png'):
-            frames.append(int(frame.split('.')[0]))
+    #my_strength = strength * .5
     
-    frames = sorted(frames)
-    print(frames)
+    args = copy.deepcopy(baseargs)
     
-    nf=[]
-    for f in frames: 
-      nf.append(f)
-    i=0
-    print(len(frames)*d)
-    md=2
-    for z in range(len(frames)+1):
-            print('___')
-            iters=d
-            i=0
-
-            mm=d//2
-
-            while len(nf)<len(frames)*d+1:
-              i2=i+1
-
-              if i2==len(nf)or i2>len(nf):
-                i2=0
-
-              if abs(sorted(nf)[i2]-sorted(nf)[i])>1:
-                f1, f2 = sorted(nf)[i],sorted(nf)[i2]
-                if ( abs(sorted(nf)[i2]-sorted(nf)[i])>d*2-1):
-                  mx=d//md
-                  if mx==0:
-                    mx+=1
-                  f3 = mx+f1
-                  md+=2
-                else:
-                  f3 = abs(f1-f2)//2+f1
-
-                print(f1,f2,'>',f3)
-                interpolate_frames("%05d" % (f1,),"%05d" % (f2,),"%05d" % (f3,),odir,film_models_folder,FILM)
-                
-                nf.append(f3)
-              else:
-                i+=1    
-
-    print(sorted(nf))
-
-
-
-def interpolate_frames(f1,f2,f3,odir,film_models_folder,FILM):
+    all_z=[]
+    all_c=[]
+    all_i=[]
+    framesfolder = os.path.join(sd.basedir ,'frames')
+    os.makedirs(framesfolder, exist_ok=True)
+    outfolder = os.path.join(sd.basedir ,'interpolations')
+    os.makedirs(outfolder, exist_ok=True)
+    seed=1    
+    kiki=0    
+   
+    random.seed()
     
-
+    frlen = len(frames)
+    clen = len(conditions)
     
-    if FILM:
+    all_c=[]
+    
+    frame = 0
+    
+    i1=0
+    i2=1    
+    
+    kf = int(duration/keyframes)
+    
+    cf = int(duration/clen)
+    
+    c1=conditions[0]
+    
+    c_i = c1
+    
+    for k in range(clen):
         
-        img1 = transforms.ToTensor()(Image.open(os.path.join(odir,f1+'.png'))).unsqueeze_(0).to(precision).to(device)
-        img3 = transforms.ToTensor()(Image.open(os.path.join(odir,f2+'.png'))).unsqueeze_(0).to(precision).to(device)
-        img1 = img1-torch.min(img1)
-        img1 = img1/torch.max(img1)
-        img3 = img3-torch.min(img3)
-        img3 = img3/torch.max(img3)
-        dt = img1.new_full((1, 1), .5)
-        
-        with torch.no_grad():
-            img2 = model(img1, img3, dt) 
+        i1=k
+        i2=k+1
+        if i2>(clen)-1:
+            i2=0
+            
+        с1=conditions[i1]
+        if k>0:
+            c1=c2
+        c2=conditions[i2]
 
-        img2 = img2-torch.min(img2)
-        img2 = img2/torch.max(img2)
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
+            
+        for f in range(cf):
+            t=blend(f/cf,blendmode)
+            c = interpolate(c1,c2,t)
+            all_c.append(c)
 
-        im = transforms.ToPILImage()(img2[0]).convert("RGB") 
+
+    print ('all_c len is :', len(all_c),'frames len is',len(frames))
+
+    ########
+    
+    kiki = 0    
+    for seed,frame in zip(seeds,frames):
         
-        im.save(os.path.join(odir,f3+'.png'))
+        args.prompt = ''
+        args.init_c = all_c[kiki]
+
+        args.seed=seed
+            
+        if kiki==0:          
+            scale=args.scale
+            
+        args.init_image = frame
+        
+        if args.init_image!= None:
+            z, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=False)
+        else:
+            z, img = sd.txt2img(args, return_latent=True, return_c=False)
+
+        all_z.append(z)
+        
+        display.display(img)
+        kiki+=1
+        
+        
+    frame = 0
+    
+    i1=0
+    i2=1
+    
+    
+    files = glob.glob(framesfolder+'/*')
+    for f in files:
+        os.remove(f)
+    
+    c1=all_c[0]
+    z1=all_z[0]
+    
+    c_i = c1
+    z_i = z1
+    
+    for k in range(keyframes):
+        
+        i1=k
+        i2=k+1
+        if i2>keyframes-1:
+            i2=0
+        
+        z1=all_z[i1]
   
-    else:
-        pred_frame = ifnet_inference(ifrmodel, Image.open(os.path.join(odir,f1+'.png')), Image.open(os.path.join(odir,f2+'.png')), 'cuda')
-       
-        pred_frame.save(os.path.join(odir,f3+'.png'))
+        с1=all_c[i1]
+        if k>0:
+            c1=c2
+            z1=z2
+            
+        z2=all_z[i2]
+        c2=all_c[i2]
+            
+        if zamp<1.:
+            z2=interpolate(z1,z2,zamp)
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
+        
+        
+        for f in range(kf):
+            gc.collect()
+            torch.cuda.empty_cache() 
+            t=blend(f/kf,'linear')
+            tLin = (f/kf)            
+            args.ddim_eta=0
+            c = interpolate(c1,c2,t)
+            z = interpolate(z1,z2,t)
+            
+            
+            
+            tf = blend(frame/(kf*keyframes),'parametric')
+            
+            print (f,t,'-',tf)
+            
+            if args.smoothinterp:
+                c = interpolate(c,c_i,tf)
+                z = interpolate(z,z_i,tf)
+                
+            if dynamicprompt != None:
+                cd = dynamicprompt(frame,int( keyframes*kf ))
+                cd = sd.root.model.get_learned_conditioning(cd)
+                c = cd*dmix + (c* (1.-dmix))
+
+            args.init_c=c
+
+            if args.dynamicstrength:
+                dynStrength = DynStrength(tLin, strength, args.smin,args.smax)
+            else:
+                dynStrength= strength
+               
+            img = sd.lat2img(args,z,dynStrength)[0]
+            
+            display.display(img)
+            filename = f"{frame:04}.png"
+            img.save(os.path.join(framesfolder,filename))
+            frame+=1
+            
+        z2 = interpolate(z1,z2,1.0)
+        c2 = interpolate(c1,c2,1.0)
+        if args.smoothinterp:
+            c2 = interpolate(c2,c_i,tf)
+            z2 = interpolate(z2,z_i,tf)
+        
+            
+    timestring = time.strftime('%Y%m%d%H%M%S')
+    filename = str(timestring)+'.mp4'
+
+    outfile = os.path.join(outfolder,filename)
     
-    return
+#    with open(os.path.join(outfolder, str(timestring)+'.txt'), 'w') as f:
+       # f.write(str(prompts)+'_'+str(seeds)+'_'+str(args.scale)+'_'+str(strength)+'_'+str(args.sampler)+'_'+str(args.steps)+'_'+str(duration)+'_'+str(zamp)+'_'+str(camp))
+    
+    mp4_path = outfile
 
-def prepare_frames(indir, outdir, sz, d):
-    i=1
-    ki=1
-    z = []
-    #sdir = os.path.join(inputs_folder,folder)
-    #odir = os.path.join(inputs_folder,'interpolated/'+folder)
-    sdir = indir
-    odir = outdir
+    image_path = os.path.join(framesfolder, "%05d.png")
+    #!ffmpeg -y -vcodec png -r {fps} -start_number 0 -i {image_path} -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -crf 7 -preset slow -pattern_type sequence {mp4_path}
+    return image_path,fps,mp4_path
+    
 
-    os.makedirs(odir, exist_ok=True)
-    for file in os.listdir(odir):
-        file = os.path.join(odir,file)
-        os.remove(file)
-    for image_file_name in sorted(os.listdir(sdir)):
-        if image_file_name.endswith(".jpg") or image_file_name.endswith(".jpeg") or image_file_name.endswith(".gif") or image_file_name.endswith(".png") or image_file_name.endswith(".bmp"):
-            p  = os.path.join( sdir, image_file_name)
-            t  = os.path.join( odir, "%05d" % (i,)+'.png') 
-            img = cv2.imread(p)
-            img = cv2.resize(img, (sz[0], sz[1]))
-            cv2.imwrite(t, img)
-            #print (i, ki)
-            z.append(i)
-            i+=d
-            ki+=1
+
+def makevideo(image_path,fps,mp4_path):
+    cmd = [
+        'ffmpeg',
+        '-y',
+        '-vcodec', 'png',
+        '-r', str(fps),
+        '-start_number', str(0),
+        '-i', image_path,
+        '-c:v', 'libx264',
+        '-vf',
+        f'fps={fps}',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '10',
+        '-preset', 'slow',
+        '-pattern_type', 'sequence',
+        mp4_path
+    ]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print(stderr)
+        raise RuntimeError(stderr)
+        
+        
+    return mp4_path
+    
+
+
+def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, prompts_list):
+    interpolate=slerp2
+    keyframes=len(prompts_list)
+
+    #my_strength = strength * .5
+    
+    args = copy.deepcopy(baseargs)
+    
+    all_z=[]
+    all_c=[]
+    all_i=[]
+    framesfolder = os.path.join(sd.basedir ,'frames')
+    os.makedirs(framesfolder, exist_ok=True)
+    outfolder = os.path.join(sd.basedir ,'interpolations')
+    os.makedirs(outfolder, exist_ok=True)
+    seed=1    
+    kiki=0    
+    seeds=[]
+    prompts=[]
+    
+    random.seed()
+    
+    for prompt in prompts_list:
+
+        if type(prompt[1])==str:        
+          args.prompt = prompt[1]
+        else:
+          args.prompt = ''
+          args.init_c = prompt[1]
+
+        args.seed=prompt[0]
+            
+        if kiki==0:
+            seed=args.seed            
+            scale=args.scale
+            
+        if len(prompt)>2:
+            args.init_image = prompt[2]
+        
+        
+        prompts.append(args.prompt)
+        
+        seeds.append(args.seed)
+
+        
+            
+        print(args.prompt)
+        if args.init_image!= None:
+            z, c, img = sd.img2img(args,args.init_image,args.strength, return_latent=True, return_c=True)
+        else:
+            z, c, img = sd.txt2img(args, return_latent=True, return_c=True)
+
+        all_z.append(z)
+        all_c.append(c)
+        display.display(img)
+        kiki+=1
+        
+        
+    frame = 0
+    
+    i1=0
+    i2=1
+    
+    kf = int(duration/keyframes)
+    files = glob.glob(framesfolder+'/*')
+    for f in files:
+        os.remove(f)
+    
+    c1=all_c[0]
+    z1=all_z[0]
+    
+    c_i = c1
+    z_i = z1
+    
+    for k in range(keyframes):
+        
+        i1=k
+        i2=k+1
+        if i2>keyframes-1:
+            i2=0
+            
+        
+        z1=all_z[i1]
+  
+        с1=all_c[i1]
+        if k>0:
+            c1=c2
+            z1=z2
+            
+        z2=all_z[i2]
+        c2=all_c[i2]
 
             
-
-def unzip_inputs(folder):
-  for z in os.listdir(folder):
-      if z.endswith('.zip'):
-          
-          pp = os.path.join(folder,z)
-          of = folder 
-
-          with zipfile.ZipFile(pp, 'r') as zip_ref:
-              zip_ref.extractall(folder)
-          f = os.path.join(of,z)
-          os.remove(f)
-          clean_up_inputs(folder)
-      
-def clean_up_inputs(inputs_folder):
-  files = []
-  for z in os.listdir(inputs_folder):
-    if z.endswith('.png'):
-      files.append(z)
-  if len(files)>0:
-    i=0
-    newdir = os.path.join(inputs_folder, 'input_'+str(i) )
-    while os.path.isdir(newdir):
-      i+=1
-      newdir = os.path.join(inputs_folder, 'input_'+str(i) )
-    os.makedirs(newdir, exist_ok=True)
-
-    for f in files:
-      os.rename(os.path.join(inputs_folder, f), os.path.join(newdir, f))
-
-def resize(img,sz):
-    height = np.size(img, 0)
-    width = np.size(img, 1)
-    
-    if width > height:
-        ratio = width / height
-        nw = int(sz* ratio)
-        nh = sz
-    else:
-        ratio =  height / width
-        nh = int(sz* ratio)
-        nw = sz
+        if zamp<1.:
+            z2=interpolate(z1,z2,zamp)
+        if camp<1.:
+            c2=interpolate(c1,c2,camp)
         
-    return(cv2.resize(img, (nw, nh)))
+        
+        for f in range(kf):
+            gc.collect()
+            torch.cuda.empty_cache() 
+            t=blend(f/kf,blendmode)
+            tLin = (f/kf)            
+            args.ddim_eta=0
+            c = interpolate(c1,c2,t)
+            z = interpolate(z1,z2,t)
+            
+            tf = blend(frame/(kf*keyframes),'parametric')
+            
+            print (f,t,'-',tf)
+            
+            if args.smoothinterp:
+                c = interpolate(c,c_i,tf)
+                z = interpolate(z,z_i,tf)
+
+            args.init_c=c
+
+            if args.dynamicstrength:
+                dynStrength = DynStrength(tLin, strength, args.smin,args.smax)
+            else:
+                dynStrength= strength
+               
+            img = sd.lat2img(args,z,dynStrength)[0]
+            
+            display.display(img)
+            filename = f"{frame:04}.png"
+            img.save(os.path.join(framesfolder,filename))
+            frame+=1
+            
+        z2 = interpolate(z1,z2,1.0)
+        c2 = interpolate(c1,c2,1.0)
+        if args.smoothinterp:
+            c2 = interpolate(c2,c_i,tf)
+            z2 = interpolate(z2,z_i,tf)
+        
+            
+    timestring = time.strftime('%Y%m%d%H%M%S')
+    filename = str(timestring)+'.mp4'
+
+    outfile = os.path.join(outfolder,filename)
     
+    with open(os.path.join(outfolder, str(timestring)+'.txt'), 'w') as f:
+        f.write(str(prompts)+'_'+str(seeds)+'_'+str(args.scale)+'_'+str(strength)+'_'+str(args.sampler)+'_'+str(args.steps)+'_'+str(duration)+'_'+str(zamp)+'_'+str(camp))
+    
+    mp4_path = outfile
+
+    image_path = os.path.join(framesfolder, "%05d.png")
+    #!ffmpeg -y -vcodec png -r {fps} -start_number 0 -i {image_path} -c:v libx264 -vf fps={fps} -pix_fmt yuv420p -crf 7 -preset slow -pattern_type sequence {mp4_path}
+    cmd = [
+        'ffmpeg',
+        '-y',
+        '-vcodec', 'png',
+        '-r', str(fps),
+        '-start_number', str(0),
+        '-i', image_path,
+        '-c:v', 'libx264',
+        '-vf',
+        f'fps={fps}',
+        '-pix_fmt', 'yuv420p',
+        '-crf', '10',
+        '-preset', 'slow',
+        '-pattern_type', 'sequence',
+        mp4_path
+    ]
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
+    if process.returncode != 0:
+        print(stderr)
+        raise RuntimeError(stderr)
+        
+        
+    return mp4_path
+
+def slerp2(v0, v1, t, DOT_THRESHOLD=0.9995):
+    """helper function to spherically interpolate two arrays v1 v2"""
+
+    if not isinstance(v0, np.ndarray):
+        inputs_are_torch = True
+        input_device = v0.device
+        v0 = v0.cpu().numpy()
+        v1 = v1.cpu().numpy()
+
+    dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
+    if np.abs(dot) > DOT_THRESHOLD:
+        v2 = (1 - t) * v0 + t * v1
+    else:
+        theta_0 = np.arccos(dot)
+        sin_theta_0 = np.sin(theta_0)
+        theta_t = theta_0 * t
+        sin_theta_t = np.sin(theta_t)
+        s0 = np.sin(theta_0 - theta_t) / sin_theta_0
+        s1 = sin_theta_t / sin_theta_0
+        v2 = s0 * v0 + s1 * v1
+
+    if inputs_are_torch:
+        v2 = torch.from_numpy(v2).to(input_device)
+
+    return v2
+
+
+def ParametricBlend( t):
+  sqt = t * t
+  return (sqt / (2.0 * (sqt - t) + 1.0))
+
+def DynStrength(t, strength, tmin,tmax):
+  t = 1 - 2 * abs(.5 - t)
+  return abs(1 - t ** 1.5 / (t ** 1.5 + (1 - t) ** 2.5))*(tmax-tmin)+tmin
+
+def CustomBlend( x):
+  r=0
+  if x >= 0.5:
+    r =  x * (1 - x) *-2+1
+  else:
+    r =  x * (1 - x) *2
+  return r
+
+
+def BezierBlend( t):
+  return t * t * (3.0 - 2.0 * t)
+
+def blend(t,ip):
+  if ip=='bezier':
+    return BezierBlend(t)
+  elif ip=='parametric':
+    return ParametricBlend(t)
+  elif ip=='inbetween':
+    return CustomBlend(t)
+  else:
+    return t
+def slerpe(z_enc_1,z_enc_2,tt):
+    #xc = sinh(a * (t * 2.0 - 1.0)) / sinh(a) / 2.0 + 0.5
+    xn = 2.0 * tt**2 if tt < 0.5 else 1.0 - 2.0 * (1.0 - tt) ** 2
+    return z_enc_1 * math.sqrt(1.0 - xn) + z_enc_2 * math.sqrt(xn)
+def clear():
+    disp.clear_output()
+def slerp(low, high,val):
+    low_norm = low/torch.norm(low, dim=1, keepdim=True)
+    high_norm = high/torch.norm(high, dim=1, keepdim=True)
+    omega = torch.acos((low_norm*high_norm).sum(1))
+    so = torch.sin(omega)
+    res = (torch.sin((1.0-val)*omega)/so).unsqueeze(1)*low + (torch.sin(val*omega)/so).unsqueeze(1) * high
+    return res
