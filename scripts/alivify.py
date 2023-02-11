@@ -41,11 +41,15 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
     
     cf = int(duration/clen)
     
+    conditions.append(conditions[0])
+    
     c1=conditions[0]
     
     c_i = c1
+    atz=[]
+
     
-    for k in range(clen):
+    for k in range(clen+1):
         
         i1=k
         i2=k+1
@@ -57,20 +61,22 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             c1=c2
         c2=conditions[i2]
 
+
         if camp<1.:
             c2=interpolate(c1,c2,camp)
             
         for f in range(cf):
-            t=blend(f/cf,blendmode)
+            t=blend(f/cf,'bezier')
             c = interpolate(c1,c2,t)
             all_c.append(c)
+            atz.append(blend(f/cf,'parametric'))
 
 
     print ('all_c len is :', len(all_c),'frames len is',len(frames))
 
     ########
     
-    kiki = 0    
+    kiki = 0
     for seed,frame in zip(seeds,frames):
         
         args.prompt = ''
@@ -137,7 +143,8 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             gc.collect()
             torch.cuda.empty_cache() 
             t=blend(f/kf,'linear')
-            tLin = (f/kf)            
+            tLin = (f/kf)  
+            tLin = atz[i1]
             args.ddim_eta=0
             c = interpolate(c1,c2,t)
             z = interpolate(z1,z2,t)
@@ -313,12 +320,13 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             
         z2=all_z[i2]
         c2=all_c[i2]
+        
+        if i2!=0:
 
-            
-        if zamp<1.:
-            z2=interpolate(z1,z2,zamp)
-        if camp<1.:
-            c2=interpolate(c1,c2,camp)
+            if zamp<1.:
+                z2=interpolate(z1,z2,zamp)
+            if camp<1.:
+                c2=interpolate(c1,c2,camp)
         
         
         for f in range(kf):
