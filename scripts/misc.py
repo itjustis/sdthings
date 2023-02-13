@@ -40,7 +40,7 @@ def interpolate_folder(inf,outf,iters):
             i2 = i+1
             if i2==len(keyframes):
                 i2 = 0
-            print(i,'>',i2)
+            #print(i,'>',i2)
             img1 = keyframes[i]
             img2 = keyframes[i2]
             
