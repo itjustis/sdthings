@@ -41,7 +41,8 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
     
     cf = int(duration/clen)
     
-    conditions.append(conditions[0])
+#    conditions.append(conditions[0])
+
     
     c1=conditions[0]
     
@@ -72,9 +73,12 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             atz.append(blend(f/cf,'parametric'))
 
 
-    print ('all_c len is :', len(all_c),'frames len is',len(frames))
+#    print ('all_c len is :', len(all_c),'frames len is',len(frames))
 
     ########
+    seeds.append(seeds[0])
+    
+    frames.append(frame[0])
     
     kiki = 0
     for seed,frame in zip(seeds,frames):
@@ -96,7 +100,7 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
 
         all_z.append(z)
         
-        display.display(img)
+#        display.display(img)
         kiki+=1
         
         
@@ -132,11 +136,18 @@ def alivify( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, 
             
         z2=all_z[i2]
         c2=all_c[i2]
-            
-        if zamp<1.:
-            z2=interpolate(z1,z2,zamp)
-        if camp<1.:
-            c2=interpolate(c1,c2,camp)
+        
+        if k!= (keyframes)-1:
+
+            if zamp<1.:
+                z2=interpolate(z1,z2,zamp)
+            if camp<1.:
+                c2=interpolate(c1,c2,camp)
+        else:
+            if zamp<1.:
+                z2=interpolate(z1,z2,.95)
+            if camp<1.:
+                c2=interpolate(c1,c2,.95)
         
         
         for f in range(kf):
@@ -283,7 +294,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
 
         all_z.append(z)
         all_c.append(c)
-        display.display(img)
+        #display.display(img)
         kiki+=1
         
         
