@@ -22,7 +22,7 @@ def processframes(sd, isimg, imix, indir, outputs_folder, randomseed=True, promp
                 ppp = promptgen()
                 print(ppp)
                 c2 = sd.root.model.get_learned_conditioning( promptgen() )
-                c = interpolate (c,c2,cmix(
+                c = interpolate (c,c2,cmix)
             conditions.append(c)
 
     for img in images:
