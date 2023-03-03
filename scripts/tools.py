@@ -46,21 +46,25 @@ class Sd:
     ###
     
     def autoc(self,image, mix=0.4, mode='fast', best_max_flavors=32):
+        with torch.no_grad():
 
-        try:
-            if image.endswith('.png') or image.endswith('.jpg') or image.endswith('.jpeg'):
-                img = Image.open(image).resize((512,512))
-        except:
-                img = image
-        c=self.ie.enc(img).detach()            
-        interrogator_prompt = self.inference(img,mode,best_max_flavors)
-        print('guessed prompt is',interrogator_prompt)
-        intc = self.root.model.get_learned_conditioning(interrogator_prompt).detach()
-        import random
-        #mix = random.randint(2,9)/10.
-        #mix = self.args.icmix
-        c = (c*mix)+(intc*(1.0-mix))
-        return c
+            try:
+                if image.endswith('.png') or image.endswith('.jpg') or image.endswith('.jpeg'):
+                    img = Image.open(image).resize((512,512))
+            except:
+                    img = image
+            c=self.ie.enc(img).detach()            
+            interrogator_prompt = self.inference(img,mode,best_max_flavors)
+            #print('guessed prompt is',interrogator_prompt)
+            intc = self.root.model.get_learned_conditioning(interrogator_prompt).detach()
+            import random
+            #mix = random.randint(2,9)/10.
+            #mix = self.args.icmix
+            if mix>0.:
+                c = (c*mix)+(intc*(1.0-mix))
+            else:
+                c = intc
+            return c
       
         
     ###
