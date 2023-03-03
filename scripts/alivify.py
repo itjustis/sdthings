@@ -7,10 +7,10 @@ import numpy as np
 import math
 from IPython import display as disp
 
-from .vhelpers import processframes, randomframes
+from .vhelpers import processframes, randomframes, interpolate
 
 
-def itsalive(randomseed, styleimage, stylemix,isimg, sz,imix,frames_folder, basedir, sd, model_url ,args, duration,fps,zamp,camp,strength,blendmode,iter1=2,iter2=2,doublefilm=True,dynamicprompt=None,dmix=0.7,promptmix=0.,promptgen=None):
+def itsalive(randomseed, styleimage, stylemix,isimg, sz,imix,frames_folder, basedir, sd, model_url ,args, duration,fps,zamp,camp,strength,blendmode,iter1=2,iter2=2,doublefilm=True,dynamicprompt=None,dmix=0.7,cmix=0.,promptgen=None):
     from sdthings.scripts.misc import interpolate_folder
     
     indir = os.path.join(basedir,'inputs')
@@ -27,8 +27,8 @@ def itsalive(randomseed, styleimage, stylemix,isimg, sz,imix,frames_folder, base
         sd.load(model_url)
         
     print('conditioning keyframes..')
-    conditions, seeds, frames = processframes(sd, isimg,imix,inputs_folder,outputs_folder,randomseed,promptmix,promptgen)
-    clear()
+    conditions, seeds, frames = processframes(sd, isimg,imix,inputs_folder,outputs_folder,randomseed,cmix,promptgen)
+    #clear()
     print('interpolating!')
     image_path,fps,mp4_path = alivify(styleimage, stylemix, sd,args,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames ,dynamicprompt,dmix)
 
@@ -46,12 +46,11 @@ def itsalive(randomseed, styleimage, stylemix,isimg, sz,imix,frames_folder, base
     else:
         makevideo(image_path,fps,mp4_path)
 
-    clear()
+    #clear()
     return mp4_path
 
 
 def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,blendmode, conditions, seeds, frames, dynamicprompt=None, dmix=0.5):
-    interpolate=slerp2
     keyframes=len(frames)
 
     #my_strength = strength * .5
@@ -70,8 +69,12 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
    
     random.seed()
     
-    frlen = len(frames)
-    clen = len(conditions)
+    frames_length = len(frames)
+    inbetweens = int(duration/keyframes)
+    
+    conditions_length = len(conditions)
+    conditions_inbetweens = int((frames_length)/(conditions_length-1))
+    conditions_inbetweens2 = conditions_inbetweens
     
     all_c=[]
     
@@ -80,47 +83,34 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
     i1=0
     i2=1    
     
-    kf = int(duration/keyframes)
-    
-    cf = int(duration/clen)
-    
-    #conditions.append(conditions[0])
-    
-    c1=copy.deepcopy(conditions[0])
-    
-    c_i = c1
+    c_i = copy.deepcopy(conditions[0])
     atz=[]
     
     if stylemix>0.:
-            stylec = sd.autoc(styleimage,0.777)
+            stylec = sd.autoc(styleimage,0.)
     
-    for k in range(clen):
-        
+    addict = (frames_length - (conditions_length-1)*conditions_inbetweens)
+    
+    for k in range(conditions_length-1):
+        spirit = -addict        
         i1=k
         i2=k+1
-        if not i2>(clen)-1:
+
+        for f in range(conditions_inbetweens):
+            t=blend(f/conditions_inbetweens,'bezier')
+            c = interpolate(conditions[i1],conditions[i2],t)
+
+            if stylemix>0.:           
+                c = torch.lerp(c,stylec,stylemix)
+
+            all_c.append(c)
+            atz.append(blend(f/conditions_inbetweens,'parametric'))
+            if addict>0:
+                conditions_inbetweens=conditions_inbetweens2+1
+                addict-=1
 
 
-            c1=copy.deepcopy(conditions[i1])
-            if k>0:
-                c1=copy.deepcopy(c2)
-            c2=copy.deepcopy(conditions[i2])
-
-
-            #if camp<1.:
-            #    c2=interpolate(c1,c2,camp)
-
-            for f in range(cf):
-                t=blend(f/cf,'bezier')
-                c = interpolate(c1,c2,t)
-                if stylemix>0.:
-                    #c = (c * (1.-stylemix)) + (stylemix*stylec)
-                    c = interpolate(c,stylec,stylemix)
-                all_c.append(c)
-                atz.append(blend(f/cf,'parametric'))
-
-
-    print ('all_c len is :', len(all_c),'frames len is',len(frames))
+    print ('all_c len is :', len(all_c),'frames len is',frames_length)
     
     ########
     
@@ -158,16 +148,13 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
     i1=0
     i2=1
     
-    
     files = glob.glob(framesfolder+'/*')
     for f in files:
         os.remove(f)
-    
-    c1=copy.deepcopy(all_c[0])
-    c2=copy.deepcopy(all_c[1])
-    z1=copy.deepcopy(all_z[0])
-    z2=copy.deepcopy(all_z[1])
-    
+        
+        
+    all_c.append(all_c[0])
+    all_z.append(all_z[0])
     
     c_i = copy.deepcopy(all_c[0])
     z_i = copy.deepcopy(all_z[0])
@@ -175,7 +162,6 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
     
     print('clen is',len(all_c))
     print('zlen is',len(all_z))
-    
     
     for k in range(keyframes):
         
@@ -185,56 +171,36 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
         if i2>keyframes-1:
             i2=0
             
-      
-        if k==0:
-            z1=copy.deepcopy(all_z[i1]) 
-            c1=copy.deepcopy(all_c[i1]) 
             
-        z2=copy.deepcopy(all_z[i2]) 
-        c2=copy.deepcopy(all_c[i2]) 
-            
-        #if not i1<keyframes-1:
-        #    z2=interpolate(all_z[0],z2,zamp)
-        #    c2=interpolate(all_c[0],c2,camp)
-        #else:
-        #    z2=copy.deepcopy(all_z[0])
-        #    c2=copy.deepcopy(all_c[0])
         
-        for f in range(kf):
+        for f in range(inbetweens):
             gc.collect()
             torch.cuda.empty_cache() 
             
-            t=blend(f/(kf-.4),'linear')
+            t=blend(f/(inbetweens-.4),'linear')
             
-            tLin = (f/(kf-.4))  
+            tLin = (f/(inbetweens-.4))  
+            #print(tLin, atz[i1])
             tLin = atz[i1]
             
             args.ddim_eta=0
-            c = interpolate(c1,c2,t)
-            z = interpolate(z1,z2,t)
+
+            z = interpolate(all_z[i1],all_z[i2],t)
+            c = torch.lerp(all_c[i1],all_c[i2],t)            
             
-            
-            tf = blend(frame/(kf*keyframes),'parametric')
-            
-            print (f,t,'-',tf)
-            
-            if args.smoothinterp:
-                c = interpolate(c,c_i,tf*.1)
-                z = interpolate(z,z_i,tf*.1)
+            tf = blend(frame/(inbetweens*keyframes),'parametric')
                 
             if dynamicprompt != None:
-                cd = dynamicprompt(frame,int( keyframes*kf ))
+                cd = dynamicprompt(frame,int( keyframes*inbetweens ))
                 cd = sd.root.model.get_learned_conditioning(cd)
-                #c = cd*dmix + (c* (1.-dmix))
-                c = interpolate(c,cd,dmix)
-
+                c = torch.lerp(c,cd,dmix)
         
             z=interpolate(z_i,z,zamp)
-            c=interpolate(c_i,c,camp)
+            c=torch.lerp(c_i,c,camp)
             
-            #if stylemix>0.:
-            #    c = (c * (1.-stylemix)) + (stylemix*stylec)                
-                
+            if frames[0]==None:
+                args.use_init=True
+            
             args.init_c=c         
 
             if args.dynamicstrength:
@@ -244,19 +210,13 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
                
             img = sd.lat2img(args,z,dynStrength)[0]
             
-            print (f+1,'/',kf,'–',k+1,'/',keyframes,'–––','i1:',i1,'i2:',i2)
+            print (f+1,'/',inbetweens,'–',k+1,'/',keyframes,'–––','i1:',i1,'i2:',i2)
             
             display.display(img)
             filename = f"{frame:04}.png"
             img.save(os.path.join(framesfolder,filename))
             frame+=1
             
-        z1 = copy.deepcopy(z2)
-        c1 = copy.deepcopy(c2)
-        if args.smoothinterp:
-            c2 = interpolate(c2,c_i,tf*.1)
-            z2 = interpolate(z2,z_i,tf*.1)
-        
             
     timestring = time.strftime('%Y%m%d%H%M%S')
     filename = str(timestring)+'.mp4'
@@ -269,7 +229,7 @@ def alivify(styleimage, stylemix, sd,baseargs,duration,fps,zamp,camp,strength,bl
     
     return image_path,fps,mp4_path
     
-
+#####################
 
 def makevideo(image_path,fps,mp4_path):
     cmd = [
@@ -362,7 +322,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
     i1=0
     i2=1
     
-    kf = int(duration/keyframes)
+    inbetweens = int(duration/keyframes)
     files = glob.glob(framesfolder+'/*')
     for f in files:
         os.remove(f)
@@ -395,19 +355,19 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             if zamp<1.:
                 z2=interpolate(z1,z2,zamp)
             if camp<1.:
-                c2=interpolate(c1,c2,camp)
+                c2=torch.lerp(c1,c2,camp)
         
         
-        for f in range(kf):
+        for f in range(inbetweens):
             gc.collect()
             torch.cuda.empty_cache() 
-            t=blend(f/kf,blendmode)
-            tLin = (f/kf)            
+            t=blend(f/inbetweens,blendmode)
+            tLin = (f/inbetweens)            
             args.ddim_eta=0
-            c = interpolate(c1,c2,t)
+            c = torch.lerp(c1,c2,t)
             z = interpolate(z1,z2,t)
             
-            tf = blend(frame/(kf*keyframes),'parametric')
+            tf = blend(frame/(inbetweens*keyframes),'parametric')
             
             print (f,t,'-',tf)
             
@@ -430,7 +390,7 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
             frame+=1
             
         z2 = interpolate(z1,z2,1.0)
-        c2 = interpolate(c1,c2,1.0)
+        c2 = torch.lerp(c1,c2,1.0)
         if args.smoothinterp:
             c2 = interpolate(c2,c_i,tf)
             z2 = interpolate(z2,z_i,tf)
@@ -473,31 +433,6 @@ def interpolate_prompts( sd,baseargs,duration,fps,zamp,camp,strength,blendmode, 
         
     return mp4_path
 
-def slerp2(v0, v1, t, DOT_THRESHOLD=0.9995):
-    """helper function to spherically interpolate two arrays v1 v2"""
-
-    if not isinstance(v0, np.ndarray):
-        inputs_are_torch = True
-        input_device = v0.device
-        v0 = v0.cpu().numpy()
-        v1 = v1.cpu().numpy()
-
-    dot = np.sum(v0 * v1 / (np.linalg.norm(v0) * np.linalg.norm(v1)))
-    if np.abs(dot) > DOT_THRESHOLD:
-        v2 = (1 - t) * v0 + t * v1
-    else:
-        theta_0 = np.arccos(dot)
-        sin_theta_0 = np.sin(theta_0)
-        theta_t = theta_0 * t
-        sin_theta_t = np.sin(theta_t)
-        s0 = np.sin(theta_0 - theta_t) / sin_theta_0
-        s1 = sin_theta_t / sin_theta_0
-        v2 = s0 * v0 + s1 * v1
-
-    if inputs_are_torch:
-        v2 = torch.from_numpy(v2).to(input_device)
-
-    return v2
 
 
 def ParametricBlend( t):
