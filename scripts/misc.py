@@ -4,11 +4,11 @@ import subprocess
 from subprocess import Popen, PIPE
 from PIL import Image
 
-from sldl.video.video_interpolation import VideoInterpolation
-vi = VideoInterpolation()
-ifrmodel = vi.model.to('cuda')
-from sldl.video.ifrnet import IFRNet, ifnet_inference
-import torch
+#from sldl.video.video_interpolation import VideoInterpolation
+#vi = VideoInterpolation()
+#ifrmodel = vi.model.to('cuda')
+#from sldl.video.ifrnet import IFRNet, ifnet_inference
+import torch, gc
 from PIL import Image
 from torchvision import transforms
 from skimage.exposure import match_histograms
@@ -19,8 +19,8 @@ from PIL import Image
 
 
 device = torch.device('cuda')
-precision = torch.float16
-model_path='/workspace/film_net_fp16.pt'
+precision = torch.float32
+model_path='models/film_net_fp32.pt'
 
 model = torch.jit.load(model_path, map_location='cpu')
 model.eval().to(device=device, dtype=precision)
@@ -28,7 +28,7 @@ model.eval().to(device=device, dtype=precision)
 
 
     
-def interpolate_folder(inf,outf,iters):
+def interpolate_folder(inf,outf,iters,sz):
     keyframes = []
     for frame in sorted(os.listdir(inf)):
         if frame.endswith('.png') or frame.endswith('.jpg') or frame.endswith('.jpeg'):
@@ -40,17 +40,18 @@ def interpolate_folder(inf,outf,iters):
             i2 = i+1
             if i2==len(keyframes):
                 i2 = 0
-            #print(i,'>',i2)
+            print(i,'>',i2)
             img1 = keyframes[i]
             img2 = keyframes[i2]
             
-            interpolate_frames(index,img1,img2,iters,outf)
+            interpolate_frames(index,img1,img2,iters,outf,sz)
             index=index+iters
         
 
     
 
-def interpolate_frames(index, img1, img2, inter_frames, save_path, sz=[768,768], half = True):
+def interpolate_frames(index, img1, img2, inter_frames, save_path, sz=[768,768], half = False):
+
     img_batch_1, crop_region_1 = load_image(img1,sz)
     img_batch_2, crop_region_2 = load_image(img2,sz)
 
@@ -67,7 +68,8 @@ def interpolate_frames(index, img1, img2, inter_frames, save_path, sz=[768,768],
 
     splits = torch.linspace(0, 1, inter_frames + 2)
 
-    for _ in tqdm(range(len(remains)), 'Generating in-between frames'):
+    for _ in tqdm(range(len(remains)), 'in-between pass'):
+        
         starts = splits[idxes[:-1]]
         ends = splits[idxes[1:]]
         distances = ((splits[None, remains] - starts[:, None]) / (ends[:, None] - starts[:, None]) - .5).abs()
@@ -105,11 +107,28 @@ def interpolate_frames(index, img1, img2, inter_frames, save_path, sz=[768,768],
         for i in range(len(frames)):
             if i != len(frames)-1:
                 frame = frames[i]
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                addnoise = True
+                if addnoise:
+                    noisy_img = frame + np.random.randn(*frame.shape)*5
+                    frame = np.clip(noisy_img, 0, 255).astype(np.uint8)
                 img =  Image.fromarray(frame)
                 #display(img)
                 filename = "%05d" % (i+index,)+".png"
                 #print('index:',index,'saving to:',filename)
                 img.save(os.path.join(save_path,filename))
+                #del frame, img
+                #gc.collect()
+                #torch.cuda.empty_cache()
+                #gc.collect()
+        #del frames,y1, x1, y2, x2
+        #gc.collect()
+        #torch.cuda.empty_cache()
+        #gc.collect()
+    #del prediction,img_batch_1,crop_region_1,img_batch_2, crop_region_2
+    #gc.collect()
+    #torch.cuda.empty_cache() 
+    #gc.collect()
 
 def resize(img,sz):
     height = np.size(img, 0)
@@ -138,7 +157,7 @@ def pad_batch(batch, align):
     batch = np.pad(batch, ((0, 0), (height_to_pad >> 1, height_to_pad - (height_to_pad >> 1)),
                            (width_to_pad >> 1, width_to_pad - (width_to_pad >> 1)), (0, 0)), mode='constant')
     return batch, crop_region
-def load_image(path, sz, align=384):
+def load_image(path, sz, align=768):
 #    print( 'loading image',path)
     image = cv2.cvtColor(cv2.resize(cv2.imread(path),(sz[0],sz[1]), interpolation = cv2.INTER_AREA), cv2.COLOR_BGR2RGB).astype(np.float32) / np.float32(255)
     image_batch, crop_region = pad_batch(np.expand_dims(image, axis=0), align)
