@@ -30,38 +30,36 @@ def interpolate(v0, v1, t, DOT_THRESHOLD=0.9995):
 
     return v2
 
-def processframes(sd, isimg, imix, indir, outputs_folder, randomseed=True, cmix=0., promptgen=None):
+def process_frames(sd, args_int ):
     random.seed()
-    images = sorted(os.listdir(outputs_folder))  
+    images = sorted(os.listdir(args_int.outputs_folder))  
     sd.args.icmix=0.5
     sd.args.cmix = 0.0
     prompts=[]
     seed= random.randint(0,4294967295)
-    inimages = sorted(os.listdir(indir))
+    inimages = sorted(os.listdir(args_int.inputs_folder))
 
     conditions, seeds, frames = [],[],[]
 
     for img in inimages:
         if img.endswith('.png') or img.endswith('.jpg'):
-            image = os.path.join(indir,img)
-            c = sd.autoc(image,imix)
-            if cmix>0. and promptgen != None:
-                ppp = promptgen()
-                print(ppp)
-                #uc, c2 = get_uc_and_c(promptgen(), sd.root.model, args, frame)
-                c2 = sd.root.model.get_learned_conditioning( promptgen() )
-                #print(c.shape,c2.shape,'kek')
-                c = torch.lerp (c.half(),c2.half(),cmix)
+            image = os.path.join(args_int.inputs_folder,img)
+            c = sd.autoc(image,args_int.imix)
+            if args_int.cmix>0. and args_int.promptgen != None:
+                ppp = args_int.promptgen()
+                c2 = sd.root.model.get_learned_conditioning( args_int.promptgen() )
+
+                c = torch.lerp (c.half(),c2.half(),args_int.cmix)
             conditions.append(c)
 
     for img in images:
         if img.endswith('.png') or img.endswith('.jpg'):
             random.seed()
-            img = os.path.join(outputs_folder,img)
-            if randomseed:
+            img = os.path.join(args_int.outputs_folder,img)
+            if args_int.randomseed:
                 seed= random.randint(0,4294967295)
             seeds.append(seed)
-            if isimg:
+            if args_int.isimg:
                 frames.append(img)
             else:
                 frames.append(None)
@@ -93,8 +91,8 @@ def randomselect(fld,keyframes):
 
 
 
-def randomframes(fold,keyframes):
-    fld=os.path.join('inputs/',fold)
+def randomframes(fld,keyframes,args_interpolation):
+    #fld=os.path.join('inputs/',fold)
     import random 
     random.seed()
 
