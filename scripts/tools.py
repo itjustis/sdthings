@@ -55,7 +55,7 @@ class Sd:
                     img = image
             c=self.ie.enc(img).detach()            
             interrogator_prompt = self.inference(img,mode,best_max_flavors)
-            #print('guessed prompt is',interrogator_prompt)
+            print('guessed prompt is',interrogator_prompt)
             intc = self.root.model.get_learned_conditioning(interrogator_prompt).detach()
             import random
             #mix = random.randint(2,9)/10.
@@ -138,6 +138,9 @@ class Sd:
         args.init_image = image
         if args.seed == -1:
             args.seed = random.randint(0, 2**32 - 1)
+            
+        print('seed is',args.seed,args.c2,args.cmix)
+
         
         if args.c2!= None:
             if args.init_c == None:
