@@ -60,7 +60,7 @@ def setup_environment(print_subprocess=True):
         import torch
         
         all_process = [
-            ['pip'. 'git+https://github.com/huggingface/transformers'],
+            ['pip', 'git+https://github.com/huggingface/transformers'],
             ['pip', 'install', 'omegaconf', 'einops==0.4.1', 'pytorch-lightning==1.7.7', 'torchmetrics', 'safetensors', 'kornia'],
             ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
             ['pip', 'install', 'accelerate', 'ftfy', 'jsonmerge', 'matplotlib', 'scikit-image','resize-right', 'timm', 'torchdiffeq','scikit-learn','torchsde','open-clip-torch','numpngw','numexpr','opencv-python'],
