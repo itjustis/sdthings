@@ -65,6 +65,9 @@ def setup_environment(print_subprocess=True):
         ['pip', 'install', 'torch==1.12.1+cu113', 'torchvision==0.13.1+cu113', '--extra-index-url', 'https://download.pytorch.org/whl/cu113'],
         ['pip', 'install', 'omegaconf==2.2.3', 'einops==0.4.1', 'pytorch-lightning==1.7.4', 'torchmetrics==0.9.3', 'torchtext==0.13.1', 'transformers==4.21.2', 'safetensors', 'kornia==0.6.7'],
         ['git', 'clone', 'https://github.com/deforum-art/deforum-stable-diffusion'],
+        ['cd', '/content/deforum-stable-diffusion'],
+        ['git', 'checkout', '59244cd41ebdaa8901f90f8b497868b6e5a05825'],
+        ['cd', '/content/'],
         ['pip', 'install', 'accelerate', 'numexpr','ftfy', 'jsonmerge', 'matplotlib', 'resize-right', 'opencv-python', 'timm', 'torchdiffeq','scikit-learn','torchsde','open_clip_torch'],
         ['apt-get', 'update'],
         ['apt-get', 'install', '-y', 'python3-opencv']
